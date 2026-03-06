@@ -1,6 +1,6 @@
 # Pokemon Madrid V2
 
-Repositorio del prototipo basico de `Pokemon Madrid V2`, pensado para desplegarse en Coolify como experiencia web estatica.
+Repositorio del RPG web inspirado en el documento fuente de Team Piso.
 
 ## Referencia principal
 
@@ -9,7 +9,7 @@ Repositorio del prototipo basico de `Pokemon Madrid V2`, pensado para desplegars
 ## Contenido
 
 - `PROMPT.md`: prompt base y contexto operativo.
-- `index.html`: demo jugable con login en Supabase y progreso persistido en `user_metadata`.
+- `index.html`: campaña completa estilo GBA-web con 13 etapas, side quests, guardado y controles GBA SP.
 - `Dockerfile`: imagen minima con `nginx:alpine`.
 - `default.conf`: configuracion simple para servir la app.
 
