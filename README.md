@@ -9,6 +9,11 @@ Repositorio del prototipo basico de `Pokemon Madrid V2`, pensado para desplegars
 ## Contenido
 
 - `PROMPT.md`: prompt base y contexto operativo.
-- `index.html`: demo jugable inicial.
+- `index.html`: demo jugable con login en Supabase y progreso persistido en `user_metadata`.
 - `Dockerfile`: imagen minima con `nginx:alpine`.
 - `default.conf`: configuracion simple para servir la app.
+
+## Credenciales demo
+
+- Telefono: `+34600000123`
+- Password: `PokemonMadridV2!2026`

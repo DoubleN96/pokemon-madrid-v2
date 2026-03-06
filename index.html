@@ -6,9 +6,10 @@
     <title>Pokemon Madrid V2</title>
     <meta
       name="description"
-      content="Version basica de Pokemon Madrid V2 desplegada en Coolify."
+      content="Version basica de Pokemon Madrid V2 con login en Supabase y progreso persistido."
     />
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
       tailwind.config = {
         theme: {
@@ -19,7 +20,8 @@
               blast: '#ff5a36',
               sky: '#58c7f3',
               leaf: '#70d66b',
-              sun: '#ffd23f'
+              sun: '#ffd23f',
+              mist: '#ebe7ff'
             },
             fontFamily: {
               display: ['Trebuchet MS', 'sans-serif'],
@@ -37,18 +39,18 @@
     <main class="min-h-screen bg-[radial-gradient(circle_at_top_left,_#ffd23f_0,_#ffd23f_12%,_transparent_12%),linear-gradient(135deg,_#f6f1e8_0%,_#fff8ef_45%,_#dff5ff_100%)]">
       <section class="mx-auto max-w-6xl px-6 py-10">
         <div class="rounded-[2rem] border-4 border-ink bg-white p-6 shadow-brutal md:p-10">
-          <div class="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
+          <div class="flex flex-col gap-8 xl:flex-row xl:items-start xl:justify-between">
             <div class="max-w-3xl">
               <p class="mb-4 inline-flex rounded-full border-4 border-ink bg-sun px-4 py-2 text-sm font-bold uppercase tracking-[0.2em]">
-                Beta jugable en Madrid
+                Beta jugable con Supabase
               </p>
               <h1 class="font-display text-5xl font-black uppercase leading-none md:text-7xl">
                 Pokemon Madrid V2
               </h1>
               <p class="mt-5 max-w-2xl text-lg leading-8">
-                Una version basica del juego inspirada en el documento fuente:
-                explora zonas de Madrid, encuentra Pokemon y suma capturas en una
-                partida rapida.
+                Demo basica del juego ambientado en Madrid. Puedes jugar como
+                invitado o entrar con un usuario demo guardado en Supabase para
+                persistir progreso, starter y mejor puntuacion.
               </p>
               <div class="mt-6 flex flex-wrap gap-3 text-sm font-bold">
                 <a
@@ -70,8 +72,39 @@
               </div>
             </div>
 
-            <aside class="w-full max-w-sm rounded-[1.5rem] border-4 border-ink bg-paper p-5 shadow-brutal">
-              <p class="text-sm font-bold uppercase tracking-[0.2em]">Estado de partida</p>
+            <aside class="w-full max-w-md rounded-[1.5rem] border-4 border-ink bg-paper p-5 shadow-brutal">
+              <div class="flex items-center justify-between gap-4">
+                <div>
+                  <p class="text-sm font-bold uppercase tracking-[0.2em]">Auth y perfil</p>
+                  <p id="auth-status" class="mt-1 text-sm font-bold">Modo invitado</p>
+                </div>
+                <div class="rounded-full border-4 border-ink bg-white px-3 py-1 text-xs font-bold uppercase">
+                  Supabase
+                </div>
+              </div>
+
+              <div class="mt-4 rounded-2xl border-4 border-ink bg-white p-4">
+                <p class="text-xs font-bold uppercase">Usuario demo</p>
+                <p class="mt-2 text-sm leading-6">
+                  Telefono: <span class="font-bold">+34600000123</span><br />
+                  Password: <span class="font-bold">PokemonMadridV2!2026</span>
+                </p>
+                <div class="mt-4 flex flex-wrap gap-3">
+                  <button
+                    id="login-button"
+                    class="rounded-full border-4 border-ink bg-leaf px-4 py-2 font-bold uppercase shadow-brutal transition hover:-translate-y-1"
+                  >
+                    Entrar con demo
+                  </button>
+                  <button
+                    id="logout-button"
+                    class="rounded-full border-4 border-ink bg-paper px-4 py-2 font-bold uppercase shadow-brutal transition hover:-translate-y-1"
+                  >
+                    Cerrar sesion
+                  </button>
+                </div>
+              </div>
+
               <div class="mt-4 grid grid-cols-2 gap-4">
                 <div class="rounded-2xl border-4 border-ink bg-leaf p-4">
                   <p class="text-xs font-bold uppercase">Capturas</p>
@@ -82,21 +115,60 @@
                   <p id="zone-name" class="mt-2 text-xl font-black">Ninguna</p>
                 </div>
               </div>
+
               <div class="mt-4 rounded-2xl border-4 border-dashed border-ink bg-white p-4">
                 <p class="text-xs font-bold uppercase">Pokemon encontrado</p>
                 <p id="encounter" class="mt-2 text-2xl font-black">Pulsa una zona</p>
               </div>
-              <div class="mt-4 rounded-2xl border-4 border-ink bg-sun p-4">
-                <p class="text-xs font-bold uppercase">Objetivo</p>
-                <p class="mt-2 font-bold">Consigue 5 capturas para completar la demo.</p>
+
+              <div class="mt-4 rounded-2xl border-4 border-ink bg-mist p-4">
+                <p class="text-xs font-bold uppercase">Perfil persistido</p>
+                <p id="player-phone" class="mt-2 text-sm font-bold">Sin login</p>
+                <p id="starter-name" class="mt-2 text-sm">Starter: no elegido</p>
+                <p id="best-score" class="mt-1 text-sm">Mejor puntuacion: 0</p>
+                <p id="unlock-state" class="mt-1 text-sm">Zona secreta: bloqueada</p>
               </div>
             </aside>
           </div>
         </div>
       </section>
 
+      <section class="mx-auto max-w-6xl px-6 pb-8">
+        <div class="rounded-[2rem] border-4 border-ink bg-white p-6 shadow-brutal md:p-8">
+          <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p class="text-sm font-bold uppercase tracking-[0.2em]">Starter y progreso</p>
+              <p class="mt-2 max-w-3xl text-lg leading-8">
+                Elige starter. Si has iniciado sesion, lo guardo en Supabase junto
+                con tu mejor puntuacion y tu ultima zona visitada.
+              </p>
+            </div>
+            <div class="flex flex-wrap gap-3">
+              <button
+                class="starter-button rounded-full border-4 border-ink bg-blast px-4 py-2 font-bold uppercase text-white shadow-brutal transition hover:-translate-y-1"
+                data-starter="Charmander"
+              >
+                Charmander
+              </button>
+              <button
+                class="starter-button rounded-full border-4 border-ink bg-sky px-4 py-2 font-bold uppercase shadow-brutal transition hover:-translate-y-1"
+                data-starter="Squirtle"
+              >
+                Squirtle
+              </button>
+              <button
+                class="starter-button rounded-full border-4 border-ink bg-leaf px-4 py-2 font-bold uppercase shadow-brutal transition hover:-translate-y-1"
+                data-starter="Bulbasaur"
+              >
+                Bulbasaur
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="mx-auto max-w-6xl px-6 pb-12">
-        <div class="grid gap-6 md:grid-cols-3">
+        <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
           <button
             class="zone-card rounded-[1.5rem] border-4 border-ink bg-sky p-6 text-left shadow-brutal transition hover:-translate-y-1"
             data-zone="Sol"
@@ -105,8 +177,8 @@
             <p class="text-sm font-bold uppercase tracking-[0.2em]">Zona 01</p>
             <h2 class="mt-3 font-display text-3xl font-black uppercase">Puerta del Sol</h2>
             <p class="mt-4 leading-7">
-              Mucha energia, ruido y encuentros rapidos. Ideal para encontrar
-              Pokemon electricos y urbanos.
+              Mucha energia, ruido y encuentros rapidos. Ideal para Pokemon
+              electricos y urbanos.
             </p>
           </button>
 
@@ -116,7 +188,7 @@
             data-pool="Bulbasaur,Psyduck,Oddish"
           >
             <p class="text-sm font-bold uppercase tracking-[0.2em]">Zona 02</p>
-            <h2 class="mt-3 font-display text-3xl font-black uppercase">Parque del Retiro</h2>
+            <h2 class="mt-3 font-display text-3xl font-black uppercase">Retiro</h2>
             <p class="mt-4 leading-7">
               Ruta tranquila para capturas de tipo planta y agua. Menos caos y
               mas precision.
@@ -131,8 +203,23 @@
             <p class="text-sm font-bold uppercase tracking-[0.2em]">Zona 03</p>
             <h2 class="mt-3 font-display text-3xl font-black uppercase">Malasana</h2>
             <p class="mt-4 leading-7">
-              Encuentros mas raros y algo caoticos. Buen sitio para buscar fuego,
-              fantasmas y energia callejera.
+              Encuentros raros y algo caoticos. Buen sitio para fuego, fantasmas
+              y energia callejera.
+            </p>
+          </button>
+
+          <button
+            id="secret-zone"
+            class="zone-card rounded-[1.5rem] border-4 border-ink bg-ink p-6 text-left text-paper opacity-50 shadow-brutal transition"
+            data-zone="Gran Via Nocturna"
+            data-pool="Snorlax,Abra,Dratini"
+            disabled
+          >
+            <p class="text-sm font-bold uppercase tracking-[0.2em]">Zona secreta</p>
+            <h2 class="mt-3 font-display text-3xl font-black uppercase">Gran Via</h2>
+            <p class="mt-4 leading-7">
+              Solo se desbloquea al iniciar sesion. Tiene encuentros mas valiosos
+              y mejora el ritmo de progresion.
             </p>
           </button>
         </div>
@@ -162,7 +249,7 @@
           <div>
             <p class="font-display text-2xl font-black uppercase">Stratoma AI</p>
             <p class="mt-1 text-sm">
-              Demo basica desplegada en Coolify para validar el flujo de juego.
+              Demo basica desplegada en Coolify con login real en Supabase.
             </p>
           </div>
           <a
@@ -178,45 +265,188 @@
     </main>
 
     <script>
+      const SUPABASE_URL =
+        'https://supabasekong-wckks4gsg8owkososoo8sosg.128.140.44.162.sslip.io';
+      const SUPABASE_ANON_KEY =
+        'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTc2ODkwNjQ0MCwiZXhwIjo0OTI0NTgwMDQwLCJyb2xlIjoiYW5vbiJ9.aePQztzDdhmgXjPlJ9zxh4_Qf5ex7Au7UyEiF_jzXK0';
+      const DEMO_PHONE = '+34600000123';
+      const DEMO_PASSWORD = 'PokemonMadridV2!2026';
+
+      const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
       const scoreEl = document.getElementById('score');
       const zoneNameEl = document.getElementById('zone-name');
       const encounterEl = document.getElementById('encounter');
       const logEl = document.getElementById('log');
+      const authStatusEl = document.getElementById('auth-status');
+      const playerPhoneEl = document.getElementById('player-phone');
+      const starterNameEl = document.getElementById('starter-name');
+      const bestScoreEl = document.getElementById('best-score');
+      const unlockStateEl = document.getElementById('unlock-state');
       const resetButton = document.getElementById('reset-button');
+      const loginButton = document.getElementById('login-button');
+      const logoutButton = document.getElementById('logout-button');
+      const secretZone = document.getElementById('secret-zone');
       const zoneButtons = Array.from(document.querySelectorAll('.zone-card'));
+      const starterButtons = Array.from(document.querySelectorAll('.starter-button'));
 
       let score = 0;
+      let currentUser = null;
+      let currentStarter = null;
+
+      function setLog(message) {
+        logEl.textContent = message;
+      }
 
       function updateScore(nextScore) {
         score = nextScore;
         scoreEl.textContent = String(score);
       }
 
-      function capture(zone, pool) {
+      function setSecretZone(enabled) {
+        secretZone.disabled = !enabled;
+        secretZone.classList.toggle('opacity-50', !enabled);
+        secretZone.classList.toggle('hover:-translate-y-1', enabled);
+      }
+
+      function applyProfile(user) {
+        const metadata = user?.user_metadata || {};
+        currentStarter = metadata.starter || null;
+
+        authStatusEl.textContent = user ? 'Sesion iniciada' : 'Modo invitado';
+        playerPhoneEl.textContent = user
+          ? 'Telefono: +' + (user.phone || '')
+          : 'Sin login';
+        starterNameEl.textContent = 'Starter: ' + (metadata.starter || 'no elegido');
+        bestScoreEl.textContent =
+          'Mejor puntuacion: ' + String(metadata.bestScore || 0);
+        unlockStateEl.textContent = user
+          ? 'Zona secreta: desbloqueada'
+          : 'Zona secreta: bloqueada';
+
+        setSecretZone(Boolean(user));
+      }
+
+      async function syncProfile(patch) {
+        if (!currentUser) return;
+
+        const { data, error } = await client.auth.updateUser({
+          data: {
+            ...(currentUser.user_metadata || {}),
+            ...patch
+          }
+        });
+
+        if (error) {
+          setLog('No se pudo guardar el progreso en Supabase.');
+          return;
+        }
+
+        currentUser = data.user;
+        applyProfile(currentUser);
+      }
+
+      async function restoreSession() {
+        const { data } = await client.auth.getSession();
+        currentUser = data.session?.user || null;
+        applyProfile(currentUser);
+      }
+
+      async function loginDemo() {
+        setLog('Conectando con el usuario demo en Supabase...');
+        const { data, error } = await client.auth.signInWithPassword({
+          phone: DEMO_PHONE,
+          password: DEMO_PASSWORD
+        });
+
+        if (error) {
+          setLog('Login fallido: ' + error.message);
+          return;
+        }
+
+        currentUser = data.user;
+        applyProfile(currentUser);
+        setLog('Sesion iniciada. Ya puedes desbloquear la zona secreta y guardar progreso.');
+      }
+
+      async function logout() {
+        await client.auth.signOut();
+        currentUser = null;
+        applyProfile(null);
+        setLog('Sesion cerrada. Sigues pudiendo jugar en modo invitado.');
+      }
+
+      async function selectStarter(starter) {
+        currentStarter = starter;
+        starterNameEl.textContent = 'Starter: ' + starter;
+
+        if (!currentUser) {
+          setLog(
+            'Starter elegido en local: ' +
+              starter +
+              '. Inicia sesion si quieres guardarlo en Supabase.'
+          );
+          return;
+        }
+
+        await syncProfile({ starter });
+        setLog('Starter ' + starter + ' guardado en tu usuario de Supabase.');
+      }
+
+      async function capture(zone, pool) {
         const pokemon = pool[Math.floor(Math.random() * pool.length)];
         zoneNameEl.textContent = zone;
         encounterEl.textContent = pokemon;
         updateScore(score + 1);
 
+        if (currentUser) {
+          const bestScore = Math.max(
+            score,
+            Number(currentUser.user_metadata?.bestScore || 0)
+          );
+          await syncProfile({
+            bestScore,
+            lastZone: zone,
+            lastPokemon: pokemon,
+            starter: currentStarter || currentUser.user_metadata?.starter || null
+          });
+        }
+
         if (score >= 5) {
-          logEl.textContent =
-            'Has completado la demo de Pokemon Madrid V2. Ya tienes suficientes capturas para pasar a una version mas grande.';
+          setLog(
+            'Has completado la demo de Pokemon Madrid V2. Si estas logueado, tu progreso ya ha quedado persistido en Supabase.'
+          );
           return;
         }
 
-        logEl.textContent =
+        setLog(
           'Has explorado ' +
-          zone +
-          ' y has capturado a ' +
-          pokemon +
-          '. Sigue recorriendo Madrid para ampliar tu equipo.';
+            zone +
+            ' y has capturado a ' +
+            pokemon +
+            '. Sigue recorriendo Madrid para ampliar tu equipo.'
+        );
       }
+
+      loginButton.addEventListener('click', loginDemo);
+      logoutButton.addEventListener('click', logout);
 
       zoneButtons.forEach((button) => {
         button.addEventListener('click', () => {
+          if (button.disabled) {
+            setLog('Necesitas iniciar sesion para entrar en esta zona.');
+            return;
+          }
+
           const zone = button.dataset.zone;
           const pool = (button.dataset.pool || '').split(',');
           capture(zone, pool);
+        });
+      });
+
+      starterButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          selectStarter(button.dataset.starter);
         });
       });
 
@@ -224,9 +454,15 @@
         updateScore(0);
         zoneNameEl.textContent = 'Ninguna';
         encounterEl.textContent = 'Pulsa una zona';
-        logEl.textContent =
-          'Partida reiniciada. Elige una zona para lanzar la primera captura.';
+        setLog('Partida reiniciada. Elige una zona para lanzar la primera captura.');
       });
+
+      client.auth.onAuthStateChange((_event, session) => {
+        currentUser = session?.user || null;
+        applyProfile(currentUser);
+      });
+
+      restoreSession();
     </script>
   </body>
 </html>
