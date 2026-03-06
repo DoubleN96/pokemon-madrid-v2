@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pokemon Madrid V2</title>
+    <meta
+      name="description"
+      content="Version basica de Pokemon Madrid V2 desplegada en Coolify."
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              ink: '#111111',
+              paper: '#f6f1e8',
+              blast: '#ff5a36',
+              sky: '#58c7f3',
+              leaf: '#70d66b',
+              sun: '#ffd23f'
+            },
+            fontFamily: {
+              display: ['Trebuchet MS', 'sans-serif'],
+              body: ['Verdana', 'sans-serif']
+            },
+            boxShadow: {
+              brutal: '8px 8px 0 #111111'
+            }
+          }
+        }
+      };
+    </script>
+  </head>
+  <body class="bg-paper text-ink font-body">
+    <main class="min-h-screen bg-[radial-gradient(circle_at_top_left,_#ffd23f_0,_#ffd23f_12%,_transparent_12%),linear-gradient(135deg,_#f6f1e8_0%,_#fff8ef_45%,_#dff5ff_100%)]">
+      <section class="mx-auto max-w-6xl px-6 py-10">
+        <div class="rounded-[2rem] border-4 border-ink bg-white p-6 shadow-brutal md:p-10">
+          <div class="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
+            <div class="max-w-3xl">
+              <p class="mb-4 inline-flex rounded-full border-4 border-ink bg-sun px-4 py-2 text-sm font-bold uppercase tracking-[0.2em]">
+                Beta jugable en Madrid
+              </p>
+              <h1 class="font-display text-5xl font-black uppercase leading-none md:text-7xl">
+                Pokemon Madrid V2
+              </h1>
+              <p class="mt-5 max-w-2xl text-lg leading-8">
+                Una version basica del juego inspirada en el documento fuente:
+                explora zonas de Madrid, encuentra Pokemon y suma capturas en una
+                partida rapida.
+              </p>
+              <div class="mt-6 flex flex-wrap gap-3 text-sm font-bold">
+                <a
+                  class="rounded-full border-4 border-ink bg-sky px-4 py-2 shadow-brutal transition hover:-translate-y-1"
+                  href="https://docs.google.com/document/d/1TXwBYnG3GU6KyckGEkcI4A6ZZcIZvrGQgk9g4vrDZlg/edit?usp=drivesdk"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Ver documento fuente
+                </a>
+                <a
+                  class="rounded-full border-4 border-ink bg-blast px-4 py-2 text-white shadow-brutal transition hover:-translate-y-1"
+                  href="https://buy.stripe.com/14AbJ11DE0bKgO64ry3wQ06"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Boton Stripe 100EUR
+                </a>
+              </div>
+            </div>
+
+            <aside class="w-full max-w-sm rounded-[1.5rem] border-4 border-ink bg-paper p-5 shadow-brutal">
+              <p class="text-sm font-bold uppercase tracking-[0.2em]">Estado de partida</p>
+              <div class="mt-4 grid grid-cols-2 gap-4">
+                <div class="rounded-2xl border-4 border-ink bg-leaf p-4">
+                  <p class="text-xs font-bold uppercase">Capturas</p>
+                  <p id="score" class="mt-2 text-4xl font-black">0</p>
+                </div>
+                <div class="rounded-2xl border-4 border-ink bg-sky p-4">
+                  <p class="text-xs font-bold uppercase">Zona actual</p>
+                  <p id="zone-name" class="mt-2 text-xl font-black">Ninguna</p>
+                </div>
+              </div>
+              <div class="mt-4 rounded-2xl border-4 border-dashed border-ink bg-white p-4">
+                <p class="text-xs font-bold uppercase">Pokemon encontrado</p>
+                <p id="encounter" class="mt-2 text-2xl font-black">Pulsa una zona</p>
+              </div>
+              <div class="mt-4 rounded-2xl border-4 border-ink bg-sun p-4">
+                <p class="text-xs font-bold uppercase">Objetivo</p>
+                <p class="mt-2 font-bold">Consigue 5 capturas para completar la demo.</p>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section class="mx-auto max-w-6xl px-6 pb-12">
+        <div class="grid gap-6 md:grid-cols-3">
+          <button
+            class="zone-card rounded-[1.5rem] border-4 border-ink bg-sky p-6 text-left shadow-brutal transition hover:-translate-y-1"
+            data-zone="Sol"
+            data-pool="Pikachu,Eevee,Meowth"
+          >
+            <p class="text-sm font-bold uppercase tracking-[0.2em]">Zona 01</p>
+            <h2 class="mt-3 font-display text-3xl font-black uppercase">Puerta del Sol</h2>
+            <p class="mt-4 leading-7">
+              Mucha energia, ruido y encuentros rapidos. Ideal para encontrar
+              Pokemon electricos y urbanos.
+            </p>
+          </button>
+
+          <button
+            class="zone-card rounded-[1.5rem] border-4 border-ink bg-leaf p-6 text-left shadow-brutal transition hover:-translate-y-1"
+            data-zone="Retiro"
+            data-pool="Bulbasaur,Psyduck,Oddish"
+          >
+            <p class="text-sm font-bold uppercase tracking-[0.2em]">Zona 02</p>
+            <h2 class="mt-3 font-display text-3xl font-black uppercase">Parque del Retiro</h2>
+            <p class="mt-4 leading-7">
+              Ruta tranquila para capturas de tipo planta y agua. Menos caos y
+              mas precision.
+            </p>
+          </button>
+
+          <button
+            class="zone-card rounded-[1.5rem] border-4 border-ink bg-blast p-6 text-left text-white shadow-brutal transition hover:-translate-y-1"
+            data-zone="Malasana"
+            data-pool="Charmander,Gastly,Mankey"
+          >
+            <p class="text-sm font-bold uppercase tracking-[0.2em]">Zona 03</p>
+            <h2 class="mt-3 font-display text-3xl font-black uppercase">Malasana</h2>
+            <p class="mt-4 leading-7">
+              Encuentros mas raros y algo caoticos. Buen sitio para buscar fuego,
+              fantasmas y energia callejera.
+            </p>
+          </button>
+        </div>
+      </section>
+
+      <section class="mx-auto max-w-6xl px-6 pb-16">
+        <div class="rounded-[2rem] border-4 border-ink bg-white p-6 shadow-brutal md:p-8">
+          <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p class="text-sm font-bold uppercase tracking-[0.2em]">Log de partida</p>
+              <p id="log" class="mt-3 max-w-3xl text-lg leading-8">
+                Bienvenido a la demo. Elige una zona para lanzar la primera captura.
+              </p>
+            </div>
+            <button
+              id="reset-button"
+              class="rounded-full border-4 border-ink bg-paper px-6 py-3 font-bold uppercase shadow-brutal transition hover:-translate-y-1"
+            >
+              Reiniciar partida
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <footer class="border-t-4 border-ink bg-ink px-6 py-8 text-paper">
+        <div class="mx-auto flex max-w-6xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p class="font-display text-2xl font-black uppercase">Stratoma AI</p>
+            <p class="mt-1 text-sm">
+              Demo basica desplegada en Coolify para validar el flujo de juego.
+            </p>
+          </div>
+          <a
+            class="inline-flex w-fit rounded-full border-4 border-paper bg-sun px-5 py-3 font-bold uppercase text-ink transition hover:-translate-y-1"
+            href="https://buy.stripe.com/14AbJ11DE0bKgO64ry3wQ06"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Comprar acceso 100EUR
+          </a>
+        </div>
+      </footer>
+    </main>
+
+    <script>
+      const scoreEl = document.getElementById('score');
+      const zoneNameEl = document.getElementById('zone-name');
+      const encounterEl = document.getElementById('encounter');
+      const logEl = document.getElementById('log');
+      const resetButton = document.getElementById('reset-button');
+      const zoneButtons = Array.from(document.querySelectorAll('.zone-card'));
+
+      let score = 0;
+
+      function updateScore(nextScore) {
+        score = nextScore;
+        scoreEl.textContent = String(score);
+      }
+
+      function capture(zone, pool) {
+        const pokemon = pool[Math.floor(Math.random() * pool.length)];
+        zoneNameEl.textContent = zone;
+        encounterEl.textContent = pokemon;
+        updateScore(score + 1);
+
+        if (score >= 5) {
+          logEl.textContent =
+            'Has completado la demo de Pokemon Madrid V2. Ya tienes suficientes capturas para pasar a una version mas grande.';
+          return;
+        }
+
+        logEl.textContent =
+          'Has explorado ' +
+          zone +
+          ' y has capturado a ' +
+          pokemon +
+          '. Sigue recorriendo Madrid para ampliar tu equipo.';
+      }
+
+      zoneButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          const zone = button.dataset.zone;
+          const pool = (button.dataset.pool || '').split(',');
+          capture(zone, pool);
+        });
+      });
+
+      resetButton.addEventListener('click', () => {
+        updateScore(0);
+        zoneNameEl.textContent = 'Ninguna';
+        encounterEl.textContent = 'Pulsa una zona';
+        logEl.textContent =
+          'Partida reiniciada. Elige una zona para lanzar la primera captura.';
+      });
+    </script>
+  </body>
+</html>
