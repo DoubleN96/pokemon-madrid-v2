@@ -24,12 +24,46 @@
     </script>
   </head>
   <body>
-    <canvas id="game"></canvas>
+    <div id="emulator-shell">
+      <div id="emulator-top">
+        <div id="speaker-left" class="speaker"></div>
+        <div id="screen-frame">
+          <div id="screen-bezel">
+            <canvas id="game"></canvas>
+            <div id="screen-glass"></div>
+          </div>
+        </div>
+        <div id="speaker-right" class="speaker"></div>
+      </div>
+      <div id="emulator-hinge"></div>
+      <div id="emulator-bottom">
+        <div id="brand-badge">GAME BOY ADVANCE SP</div>
+        <div id="console-controls">
+          <div class="console-dpad">
+            <span class="up"></span>
+            <span class="left"></span>
+            <span class="right"></span>
+            <span class="down"></span>
+            <span class="center"></span>
+          </div>
+          <div class="console-actions">
+            <span class="action-b">B</span>
+            <span class="action-a">A</span>
+          </div>
+        </div>
+        <div id="console-start-select">
+          <span>Select</span>
+          <span>Start</span>
+        </div>
+      </div>
+    </div>
 
     <div id="overlay">
       <div id="top-left" class="panel">
         <p class="eyebrow">Pokemon FireRed Web x Team Piso</p>
         <h1>La Caida del Imperio</h1>
+        <p id="area-name">Tetuan y Bravo Murillo</p>
+        <p id="objective-text">Habla con Mama y luego con el Profesor Galdos.</p>
         <p id="world-status">Muevete por el mapa, pisa hierba alta y pulsa X para interactuar.</p>
       </div>
 

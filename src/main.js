@@ -1,23 +1,14 @@
 import * as THREE from 'three';
-import {
-  BLOCKED_TILES,
-  GRASS_PATCHES,
-  ITEM_TILES,
-  LANDMARKS,
-  MAP_SIZE,
-  NPCS,
-  PEDESTALS,
-  SPECIAL_TILES,
-  SPECIES,
-  STAGES,
-  STARTERS,
-  WILD_TABLE
-} from './game-data.js';
+import { AREAS, MAP_SIZE, SPECIES, STAGES, STARTERS, WILD_TABLE } from './game-data.js';
 
 const SAVE_KEY = 'pokemon-madrid-v2-threed-save';
+const INTERNAL_WIDTH = 480;
+const INTERNAL_HEIGHT = 320;
 
 const canvas = document.getElementById('game');
 const worldStatusEl = document.getElementById('world-status');
+const areaNameEl = document.getElementById('area-name');
+const objectiveTextEl = document.getElementById('objective-text');
 const playerLevelEl = document.getElementById('player-level');
 const playerCoinsEl = document.getElementById('player-coins');
 const playerBadgesEl = document.getElementById('player-badges');
@@ -46,24 +37,24 @@ const menuScreenEl = document.getElementById('menu-screen');
 const menuContentEl = document.getElementById('menu-content');
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x9ad9ff);
-scene.fog = new THREE.Fog(0x9ad9ff, 10, 36);
+scene.background = new THREE.Color(0xb8d878);
+scene.fog = new THREE.Fog(0xb8d878, 10, 24);
 
-const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 100);
-camera.position.set(9, 13, 15);
+const camera = new THREE.OrthographicCamera(-10, 10, 6.5, -6.5, 0.1, 60);
+camera.position.set(9, 16, 13);
+camera.lookAt(9, 0, 9);
 
 const renderer = new THREE.WebGLRenderer({
   canvas,
-  antialias: true,
+  antialias: false,
   powerPreference: 'high-performance'
 });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.setPixelRatio(1);
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.95));
-const sun = new THREE.DirectionalLight(0xffffff, 1.15);
-sun.position.set(12, 20, 10);
+scene.add(new THREE.AmbientLight(0xffffff, 1.1));
+const sun = new THREE.DirectionalLight(0xfff4c8, 0.65);
+sun.position.set(12, 20, 8);
 scene.add(sun);
 
 const worldGroup = new THREE.Group();
@@ -73,9 +64,11 @@ const tileMeshes = new Map();
 const pedestalMeshes = new Map();
 const itemMarkers = new Map();
 const npcMarkers = new Map();
+const portalMarkers = new Map();
 
 const state = {
   starterChosen: false,
+  currentArea: 'tetuan',
   flags: {
     talkedToMother: false,
     metGaldos: false,
@@ -108,6 +101,10 @@ const state = {
   battle: null,
   menuOpen: false
 };
+
+function currentArea() {
+  return AREAS[state.currentArea];
+}
 
 function defaultMon(speciesName, level = 5) {
   const species = SPECIES[speciesName];
@@ -151,6 +148,7 @@ function loadGame() {
     if (saved.collectedItems) state.collectedItems = saved.collectedItems;
     if (saved.consumedRewards) state.consumedRewards = saved.consumedRewards;
     if (saved.starterChosen != null) state.starterChosen = saved.starterChosen;
+    if (saved.currentArea && AREAS[saved.currentArea]) state.currentArea = saved.currentArea;
   } catch (_error) {
     // ignore malformed save
   }
@@ -161,12 +159,12 @@ function isInsidePatch(x, z, patch) {
 }
 
 function isGrass(x, z) {
-  return GRASS_PATCHES.some((patch) => isInsidePatch(x, z, patch));
+  return currentArea().grassPatches.some((patch) => isInsidePatch(x, z, patch));
 }
 
 function isBlocked(x, z) {
   if (x < 0 || z < 0 || x >= MAP_SIZE || z >= MAP_SIZE) return true;
-  return BLOCKED_TILES.some((block) => isInsidePatch(x, z, block));
+  return currentArea().blockedTiles.some((block) => isInsidePatch(x, z, block));
 }
 
 function stageById(id) {
@@ -182,7 +180,7 @@ function currentWildTier() {
 }
 
 function pickWildSpecies() {
-  const table = WILD_TABLE[currentWildTier()];
+  const table = WILD_TABLE[currentArea().wildTable][currentWildTier()];
   return table[Math.floor(Math.random() * table.length)];
 }
 
@@ -205,24 +203,26 @@ function rewardOnce(id) {
 function rewardPlayer(reward, id = null) {
   if (id && !rewardOnce(id)) return;
   if (!reward) return;
-  if (reward.type === 'item') {
-    state.player[reward.key] += reward.amount;
-  }
+  if (reward.type === 'item') state.player[reward.key] += reward.amount;
 }
 
 function nearestDistance(a, b) {
   return Math.abs(a.x - b.x) + Math.abs(a.z - b.z);
 }
 
-function getNpcAt(x, z) {
-  return NPCS.find((npc) => npc.x === x && npc.z === z);
-}
-
-function getItemAt(x, z) {
-  return ITEM_TILES.find((item) => item.x === x && item.z === z && !state.collectedItems.includes(item.id));
+function currentObjective() {
+  if (!state.flags.talkedToMother) return 'Habla con Mama en Bravo Murillo 37.';
+  if (!state.flags.metGaldos) return 'Entra al laboratorio y habla con el Profesor Galdos.';
+  if (!state.flags.beatPablo) return 'Derrota a Pablo cerca del Metro de Madrid.';
+  const next = nextStage();
+  if (next) return `Siguiente combate: ${next.name} - ${next.title}.`;
+  if (!state.flags.sawLegendary) return 'Busca a Orson Regio en la Liga Team Piso.';
+  return 'Has despejado la campaña principal de este slice.';
 }
 
 function renderHud() {
+  areaNameEl.textContent = currentArea().name;
+  objectiveTextEl.textContent = currentObjective();
   playerLevelEl.textContent = String(state.player.level);
   playerCoinsEl.textContent = String(state.player.coins);
   playerBadgesEl.textContent = String(state.player.badges.length);
@@ -233,10 +233,7 @@ function renderHud() {
   state.player.party.forEach((mon, index) => {
     const slot = document.createElement('div');
     slot.className = `party-slot ${index === state.player.activePartyIndex ? 'active' : ''}`;
-    slot.innerHTML = `
-      <strong>${mon.species}</strong><br />
-      Nv ${mon.level} · HP ${mon.hp}/${mon.maxHp}
-    `;
+    slot.innerHTML = `<strong>${mon.species}</strong><br />Nv ${mon.level} · HP ${mon.hp}/${mon.maxHp}`;
     slot.addEventListener('click', () => {
       state.player.activePartyIndex = index;
       renderHud();
@@ -288,10 +285,12 @@ function renderMenu() {
   menuScreenEl.classList.remove('hidden');
   const next = nextStage();
   menuContentEl.innerHTML = `
-    <p><strong>Siguiente objetivo:</strong> ${next ? `${next.name} - ${next.title}` : 'Liga completada'}</p>
+    <p><strong>Zona actual:</strong> ${currentArea().name}</p>
+    <p><strong>Siguiente objetivo:</strong> ${next ? `${next.name} - ${next.title}` : 'Liga despejada'}</p>
+    <p><strong>Inventario:</strong> ${state.player.balls} Pokeballs · ${state.player.potions} Pociones</p>
     <p><strong>Medallas:</strong> ${state.player.badges.join(', ') || 'Ninguna'}</p>
-    <p><strong>Pokemon capturados:</strong> ${state.player.party.map((mon) => mon.species).join(', ') || 'Ninguno'}</p>
-    <p><strong>Flags:</strong> madre ${state.flags.talkedToMother ? 'ok' : 'pendiente'}, Galdos ${state.flags.metGaldos ? 'ok' : 'pendiente'}, Pablo ${state.flags.beatPablo ? 'ok' : 'pendiente'}</p>
+    <p><strong>Equipo:</strong> ${state.player.party.map((mon) => `${mon.species} Nv${mon.level}`).join(', ') || 'Vacio'}</p>
+    <p><strong>Flags:</strong> madre ${state.flags.talkedToMother ? 'ok' : 'pendiente'} · Galdos ${state.flags.metGaldos ? 'ok' : 'pendiente'} · Pablo ${state.flags.beatPablo ? 'ok' : 'pendiente'} · Orson ${state.flags.sawLegendary ? 'visto' : 'pendiente'}</p>
     <p><strong>Controles:</strong> Flechas/WASD mover · X interactuar · Z atras/huir · Shift cambiar lead · Enter menu.</p>
   `;
 }
@@ -343,10 +342,13 @@ function completeStage(stageId, reward) {
 
 function endBattleWin() {
   const battle = state.battle;
-  if (battle.type === 'trainer') {
+  if (battle.type === 'trainer' && battle.trainerStageId) {
     const stage = stageById(battle.trainerStageId);
     completeStage(stage.id, stage.reward);
     worldStatusEl.textContent = `Has derrotado a ${stage.name}. ${stage.reward} conseguida.`;
+  } else if (battle.type === 'trainer') {
+    state.player.coins += battle.rewardCoins || 40;
+    worldStatusEl.textContent = 'Combate importante ganado.';
   } else {
     state.player.coins += 20;
     worldStatusEl.textContent = 'Combate ganado.';
@@ -366,7 +368,7 @@ function forceWildEncounter(species = pickWildSpecies(), level = 4 + currentWild
 }
 
 function swapToHealthyMon() {
-  const nextIndex = state.player.party.findIndex((mon) => mon.hp > 0);
+  const nextIndex = state.player.party.findIndex((mon, index) => mon.hp > 0 && index !== state.player.activePartyIndex);
   if (nextIndex >= 0) {
     state.player.activePartyIndex = nextIndex;
     addBattleLog(`Sale ${state.player.party[nextIndex].species}.`);
@@ -388,9 +390,10 @@ function enemyTurn() {
   if (player.hp <= 0) {
     addBattleLog(`${player.species} cae debilitado.`);
     if (!swapToHealthyMon()) {
-      worldStatusEl.textContent = 'Has sido derrotado. Vuelves al Centro Team Piso.';
-      state.player.x = SPECIAL_TILES.center.x;
-      state.player.z = SPECIAL_TILES.center.z + 1;
+      const spawn = currentArea().spawn;
+      worldStatusEl.textContent = 'Has sido derrotado. Vuelves al punto seguro del area.';
+      state.player.x = spawn.x;
+      state.player.z = spawn.z;
       state.player.party.forEach((mon) => {
         mon.hp = mon.maxHp;
       });
@@ -501,80 +504,61 @@ function playerAction(action) {
   enemyTurn();
 }
 
+function getNearbyPortal() {
+  return currentArea().portals.find((entry) => nearestDistance({ x: state.player.x, z: state.player.z }, entry) <= 1);
+}
+
 function getInteraction() {
   const pos = { x: state.player.x, z: state.player.z };
+  const area = currentArea();
 
-  const npc = NPCS.find((entry) => nearestDistance(pos, entry) <= 1);
+  const npc = area.npcs.find((entry) => nearestDistance(pos, entry) <= 1);
   if (npc) {
-    return {
-      kind: 'npc',
-      npc,
-      title: npc.title,
-      text: npc.text
-    };
+    return { kind: 'npc', npc, title: npc.title, text: npc.text };
   }
 
-  const item = ITEM_TILES.find(
-    (entry) => nearestDistance(pos, entry) <= 0 && !state.collectedItems.includes(entry.id)
-  );
+  const item = area.items.find((entry) => nearestDistance(pos, entry) <= 0 && !state.collectedItems.includes(entry.id));
   if (item) {
+    return { kind: 'item', item, title: item.title, text: `${item.text} Pulsa X para recogerlo.` };
+  }
+
+  const portal = getNearbyPortal();
+  if (portal) {
+    const locked = portal.requiresStage && !state.player.completedStages.includes(portal.requiresStage);
     return {
-      kind: 'item',
-      item,
-      title: item.title,
-      text: `${item.text} Pulsa X para recogerlo.`
+      kind: 'portal',
+      portal,
+      title: portal.title,
+      text: locked ? 'Todavia no puedes usar este acceso.' : portal.text,
+      locked
     };
   }
 
-  if (nearestDistance(pos, SPECIAL_TILES.center) <= 1) {
-    return {
-      kind: 'center',
-      title: 'Centro Team Piso',
-      text: 'Pulsa X para curar al equipo completo.'
-    };
+  if (area.specialTiles.center && nearestDistance(pos, area.specialTiles.center) <= 1) {
+    return { kind: 'center', title: 'Centro Team Piso', text: 'Pulsa X para curar al equipo completo.' };
   }
 
-  if (nearestDistance(pos, SPECIAL_TILES.sign) <= 1) {
-    return {
-      kind: 'sign',
-      title: 'Cartel de ruta',
-      text: 'Bravo Murillo conecta Tetuán, laboratorios, Metro y la primera ruta de gimnasios.'
-    };
+  if (area.specialTiles.sign && nearestDistance(pos, area.specialTiles.sign) <= 1) {
+    return { kind: 'sign', title: 'Cartel de ruta', text: `Zona: ${area.name}. Sigue el objetivo principal para progresar.` };
   }
 
-  if (nearestDistance(pos, SPECIAL_TILES.homeDoor) <= 1) {
-    return {
-      kind: 'home',
-      title: 'Bravo Murillo 37',
-      text: 'Tu casa. Mamá sigue esperando noticias de papá.'
-    };
+  if (area.specialTiles.homeDoor && nearestDistance(pos, area.specialTiles.homeDoor) <= 1) {
+    return { kind: 'home', title: 'Bravo Murillo 37', text: 'Tu casa. Aun quedan demasiadas cosas por resolver.' };
   }
 
-  if (nearestDistance(pos, SPECIAL_TILES.labDoor) <= 1) {
-    return {
-      kind: 'lab',
-      title: 'Laboratorio del Profesor Galdos',
-      text: 'Pulsa X para hablar con el profesor y revisar tu MadratNav.'
-    };
+  if (area.specialTiles.labDoor && nearestDistance(pos, area.specialTiles.labDoor) <= 1) {
+    return { kind: 'lab', title: 'Laboratorio del Profesor Galdos', text: 'Pulsa X para hablar con el profesor y revisar tu MadratNav.' };
   }
 
-  if (!state.flags.beatPablo && nearestDistance(pos, SPECIAL_TILES.rival) <= 1) {
-    return {
-      kind: 'rival',
-      title: 'Pablo',
-      text: 'Tu rival de siempre. Pulsa X para aceptar el combate.'
-    };
+  if (area.specialTiles.rival && !state.flags.beatPablo && nearestDistance(pos, area.specialTiles.rival) <= 1) {
+    return { kind: 'rival', title: 'Pablo', text: 'Tu rival de siempre. Pulsa X para aceptar el combate.' };
   }
 
-  if (state.player.completedStages.includes('marcelino') && nearestDistance(pos, SPECIAL_TILES.legendary) <= 1) {
-    return {
-      kind: 'legendary',
-      title: 'Orson Regio',
-      text: 'Pulsa X para desafiar al legendario final.'
-    };
+  if (area.specialTiles.legendary && state.player.completedStages.includes('marcelino') && nearestDistance(pos, area.specialTiles.legendary) <= 1) {
+    return { kind: 'legendary', title: 'Orson Regio', text: 'Pulsa X para desafiar al legendario final.' };
   }
 
-  const pedestal = PEDESTALS.find((entry) => nearestDistance(pos, entry) <= 1);
+  const pedestal = area.pedestals.find((entry) => nearestDistance(pos, entry) <= 1);
   if (pedestal) {
     const stage = stageById(pedestal.stageId);
     const next = nextStage();
@@ -591,6 +575,107 @@ function getInteraction() {
   }
 
   return null;
+}
+
+function clearWorld() {
+  while (worldGroup.children.length > 0) {
+    const child = worldGroup.children.pop();
+    if (!child) break;
+    worldGroup.remove(child);
+  }
+  tileMeshes.clear();
+  pedestalMeshes.clear();
+  itemMarkers.clear();
+  npcMarkers.clear();
+  portalMarkers.clear();
+}
+
+function buildTile(x, z, color, height = 0.6) {
+  const geometry = new THREE.BoxGeometry(1, height, 1);
+  const material = new THREE.MeshStandardMaterial({ color, flatShading: true });
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.position.set(x, height / 2 - 0.3, z);
+  worldGroup.add(mesh);
+  tileMeshes.set(`${x},${z}`, mesh);
+}
+
+function buildLandmark(landmark) {
+  const geometry = new THREE.BoxGeometry(landmark.width, 1.35, landmark.depth);
+  const material = new THREE.MeshStandardMaterial({ color: landmark.color, flatShading: true });
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.position.set(landmark.x, 0.42, landmark.z);
+  worldGroup.add(mesh);
+}
+
+function buildWorld() {
+  clearWorld();
+  const area = currentArea();
+  scene.background = new THREE.Color(area.id === 'liga' ? 0xa5b4ff : 0xb8d878);
+  scene.fog = new THREE.Fog(area.id === 'liga' ? 0xa5b4ff : 0xb8d878, 8, 22);
+
+  for (let z = 0; z < MAP_SIZE; z += 1) {
+    for (let x = 0; x < MAP_SIZE; x += 1) {
+      let color = area.baseColor;
+      if (isGrass(x, z)) color = 0x69b84c;
+      if (area.specialTiles.center && x === area.specialTiles.center.x && z === area.specialTiles.center.z) color = 0xeaeff6;
+      if (area.specialTiles.sign && x === area.specialTiles.sign.x && z === area.specialTiles.sign.z) color = 0xb27039;
+      buildTile(x, z, color);
+    }
+  }
+
+  area.landmarks.forEach(buildLandmark);
+
+  area.pedestals.forEach((pedestal) => {
+    const base = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.34, 0.48, 1.1, 8),
+      new THREE.MeshStandardMaterial({ color: pedestal.color, flatShading: true })
+    );
+    base.position.set(pedestal.x, 0.5, pedestal.z);
+    worldGroup.add(base);
+    pedestalMeshes.set(pedestal.stageId, base);
+  });
+
+  area.npcs.forEach((npc) => {
+    const marker = new THREE.Mesh(
+      new THREE.BoxGeometry(0.55, 0.85, 0.55),
+      new THREE.MeshStandardMaterial({ color: 0xf7efe0, flatShading: true })
+    );
+    marker.position.set(npc.x, 0.18, npc.z);
+    worldGroup.add(marker);
+    npcMarkers.set(npc.id, marker);
+  });
+
+  area.items.forEach((item) => {
+    const marker = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.28),
+      new THREE.MeshStandardMaterial({ color: 0xffdc4e, emissive: 0x664c00, flatShading: true })
+    );
+    marker.position.set(item.x, 0.18, item.z);
+    worldGroup.add(marker);
+    itemMarkers.set(item.id, marker);
+  });
+
+  area.portals.forEach((portal) => {
+    const marker = new THREE.Mesh(
+      new THREE.BoxGeometry(0.9, 0.12, 0.9),
+      new THREE.MeshStandardMaterial({ color: portal.color, emissive: portal.color, emissiveIntensity: 0.28, flatShading: true })
+    );
+    marker.position.set(portal.x, -0.18, portal.z);
+    worldGroup.add(marker);
+    portalMarkers.set(portal.id, marker);
+  });
+}
+
+function transitionToArea(areaId, x, z) {
+  state.currentArea = areaId;
+  state.player.x = x;
+  state.player.z = z;
+  state.movement.isMoving = false;
+  state.movement.progress = 1;
+  buildWorld();
+  worldStatusEl.textContent = `Llegas a ${currentArea().name}.`;
+  renderHud();
+  saveGame();
 }
 
 function interact() {
@@ -619,6 +704,15 @@ function interact() {
     return;
   }
 
+  if (interaction.kind === 'portal') {
+    if (interaction.locked) {
+      worldStatusEl.textContent = 'El acceso sigue bloqueado. Necesitas avanzar mas en la Liga.';
+      return;
+    }
+    transitionToArea(interaction.portal.toArea, interaction.portal.toX, interaction.portal.toZ);
+    return;
+  }
+
   if (interaction.kind === 'center') {
     state.player.party.forEach((mon) => {
       mon.hp = mon.maxHp;
@@ -631,13 +725,13 @@ function interact() {
 
   if (interaction.kind === 'sign' || interaction.kind === 'home') {
     worldStatusEl.textContent = interaction.text;
+    renderHud();
     return;
   }
 
   if (interaction.kind === 'lab') {
     state.flags.metGaldos = true;
-    worldStatusEl.textContent =
-      'Profesor Galdos: Madrid esta lleno de historias, captura Pokemon y avanza por los gimnasios.';
+    worldStatusEl.textContent = 'Profesor Galdos: captura Pokemon, cruza zonas y limpia la Liga por etapas.';
     renderHud();
     saveGame();
     return;
@@ -647,8 +741,8 @@ function interact() {
     spawnBattle('trainer', {
       team: ['Ratamad', 'Pichoneta', 'Eevee'],
       baseLevel: 5,
-      stageId: null,
-      opening: 'Pablo: "Siempre compitiendo por todo. Vamos a ver si vales para esto."'
+      opening: 'Pablo: "Siempre compitiendo por todo. Vamos a ver si vales para esto."',
+      rewardCoins: 55
     });
     state.flags.beatPablo = true;
     saveGame();
@@ -659,8 +753,8 @@ function interact() {
     spawnBattle('trainer', {
       team: [defaultMon('OrsonRegio', 18)],
       baseLevel: 18,
-      stageId: null,
-      opening: 'Orson Regio ruge frente al skyline de Madrid.'
+      opening: 'Orson Regio ruge frente al skyline de Madrid.',
+      rewardCoins: 180
     });
     state.flags.sawLegendary = true;
     saveGame();
@@ -678,7 +772,6 @@ function interact() {
       stageId: interaction.stage.id,
       opening: `${interaction.stage.name}: "${interaction.stage.quote}"`
     });
-    return;
   }
 }
 
@@ -707,9 +800,7 @@ function stepPlayer(dx, dz) {
   state.movement.progress = 0;
   state.player.x = nx;
   state.player.z = nz;
-  worldStatusEl.textContent = isGrass(nx, nz)
-    ? 'Hierba alta. Puede salir un Pokemon salvaje.'
-    : 'Explorando Hispania Nova.';
+  worldStatusEl.textContent = isGrass(nx, nz) ? 'Hierba alta. Puede salir un Pokemon salvaje.' : `Explorando ${currentArea().name}.`;
   renderHud();
   saveGame();
 }
@@ -728,78 +819,17 @@ function cycleLeadMon() {
   saveGame();
 }
 
-function buildTile(x, z, color, height = 0.4) {
-  const geometry = new THREE.BoxGeometry(1, height, 1);
-  const material = new THREE.MeshStandardMaterial({ color });
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.position.set(x, height / 2, z);
-  worldGroup.add(mesh);
-  tileMeshes.set(`${x},${z}`, mesh);
-}
-
-function buildLandmark(landmark) {
-  const geometry = new THREE.BoxGeometry(landmark.width, 1.8, landmark.depth);
-  const material = new THREE.MeshStandardMaterial({ color: landmark.color });
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.position.set(landmark.x, 1.1, landmark.z);
-  worldGroup.add(mesh);
-}
-
-function buildWorld() {
-  for (let z = 0; z < MAP_SIZE; z += 1) {
-    for (let x = 0; x < MAP_SIZE; x += 1) {
-      let color = 0xd8d0c0;
-      if (isGrass(x, z)) color = 0x64b95d;
-      if (x === SPECIAL_TILES.center.x && z === SPECIAL_TILES.center.z) color = 0xf2f2f2;
-      if (x === SPECIAL_TILES.sign.x && z === SPECIAL_TILES.sign.z) color = 0xd69554;
-      buildTile(x, z, color);
-    }
-  }
-
-  LANDMARKS.forEach(buildLandmark);
-
-  PEDESTALS.forEach((pedestal) => {
-    const base = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.34, 0.48, 1.2, 10),
-      new THREE.MeshStandardMaterial({ color: pedestal.color })
-    );
-    base.position.set(pedestal.x, 1.0, pedestal.z);
-    worldGroup.add(base);
-    pedestalMeshes.set(pedestal.stageId, base);
-  });
-
-  NPCS.forEach((npc) => {
-    const marker = new THREE.Mesh(
-      new THREE.CapsuleGeometry(0.22, 0.6, 4, 8),
-      new THREE.MeshStandardMaterial({ color: 0xfff6d1 })
-    );
-    marker.position.set(npc.x, 0.75, npc.z);
-    worldGroup.add(marker);
-    npcMarkers.set(npc.id, marker);
-  });
-
-  ITEM_TILES.forEach((item) => {
-    const marker = new THREE.Mesh(
-      new THREE.OctahedronGeometry(0.28),
-      new THREE.MeshStandardMaterial({ color: 0xffdc4e, emissive: 0x664c00 })
-    );
-    marker.position.set(item.x, 0.7, item.z);
-    worldGroup.add(marker);
-    itemMarkers.set(item.id, marker);
-  });
-}
-
 const playerMesh = new THREE.Group();
 const body = new THREE.Mesh(
-  new THREE.BoxGeometry(0.7, 0.9, 0.7),
-  new THREE.MeshStandardMaterial({ color: 0xff4343 })
+  new THREE.BoxGeometry(0.68, 0.88, 0.68),
+  new THREE.MeshStandardMaterial({ color: 0xd94143, flatShading: true })
 );
-body.position.y = 0.75;
+body.position.y = 0.2;
 const hat = new THREE.Mesh(
-  new THREE.BoxGeometry(0.74, 0.18, 0.74),
-  new THREE.MeshStandardMaterial({ color: 0x2a47ff })
+  new THREE.BoxGeometry(0.72, 0.16, 0.72),
+  new THREE.MeshStandardMaterial({ color: 0x3356d7, flatShading: true })
 );
-hat.position.y = 1.27;
+hat.position.y = 0.72;
 playerMesh.add(body, hat);
 scene.add(playerMesh);
 
@@ -819,9 +849,10 @@ function updatePlayerMesh(dt) {
     playerMesh.position.x = state.player.x;
     playerMesh.position.z = state.player.z;
   }
-  camera.position.x = THREE.MathUtils.lerp(camera.position.x, playerMesh.position.x + 0.4, speed);
-  camera.position.z = THREE.MathUtils.lerp(camera.position.z, playerMesh.position.z + 7.8, speed);
-  camera.lookAt(playerMesh.position.x, 0.4, playerMesh.position.z + 0.4);
+
+  camera.position.x = THREE.MathUtils.lerp(camera.position.x, playerMesh.position.x + 0.1, speed * 0.9);
+  camera.position.z = THREE.MathUtils.lerp(camera.position.z, playerMesh.position.z + 4.8, speed * 0.9);
+  camera.lookAt(playerMesh.position.x, 0, playerMesh.position.z);
 }
 
 function highlightWorld(time) {
@@ -829,7 +860,7 @@ function highlightWorld(time) {
   pedestalMeshes.forEach((mesh, stageId) => {
     const completed = state.player.completedStages.includes(stageId);
     const active = next && next.id === stageId;
-    mesh.position.y = active ? 1 + Math.sin(time * 0.004) * 0.12 : 1;
+    mesh.position.y = active ? 0.5 + Math.sin(time * 0.004) * 0.1 : 0.5;
     mesh.material.emissive = new THREE.Color(completed ? 0x1e6a1e : active ? 0x4224aa : 0x000000);
   });
 
@@ -839,7 +870,13 @@ function highlightWorld(time) {
   });
 
   npcMarkers.forEach((mesh) => {
-    mesh.position.y = 0.78 + Math.sin(time * 0.003) * 0.05;
+    mesh.position.y = 0.18 + Math.sin(time * 0.003) * 0.04;
+  });
+
+  portalMarkers.forEach((mesh, portalId) => {
+    const portal = currentArea().portals.find((entry) => entry.id === portalId);
+    const locked = portal?.requiresStage && !state.player.completedStages.includes(portal.requiresStage);
+    mesh.material.emissiveIntensity = locked ? 0.06 : 0.28 + Math.sin(time * 0.005) * 0.08;
   });
 }
 
@@ -848,7 +885,7 @@ function chooseStarter(speciesName) {
   state.player.activePartyIndex = 0;
   state.starterChosen = true;
   starterScreenEl.classList.add('hidden');
-  worldStatusEl.textContent = `${speciesName} se une al equipo. Sal a explorar Tetuán.`;
+  worldStatusEl.textContent = `${speciesName} se une al equipo. Sal a explorar Tetuan.`;
   renderHud();
   saveGame();
 }
@@ -897,12 +934,20 @@ window.addEventListener('keydown', (event) => {
   if (key === 'shift') cycleLeadMon();
 });
 
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
+function resizeRenderer() {
+  const screen = canvas.getBoundingClientRect();
+  const aspect = screen.width / screen.height || 1.5;
+  const baseHeight = INTERNAL_HEIGHT;
+  const baseWidth = Math.round(baseHeight * aspect);
+  renderer.setSize(baseWidth, baseHeight, false);
+  camera.left = -8.5 * aspect;
+  camera.right = 8.5 * aspect;
+  camera.top = 6.5;
+  camera.bottom = -6.5;
   camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-});
+}
+
+window.addEventListener('resize', resizeRenderer);
 
 function animate(time) {
   requestAnimationFrame(animate);
@@ -915,9 +960,8 @@ function animate(time) {
 loadGame();
 buildWorld();
 initStarterButtons();
-if (state.starterChosen && state.player.party.length > 0) {
-  starterScreenEl.classList.add('hidden');
-}
+if (state.starterChosen && state.player.party.length > 0) starterScreenEl.classList.add('hidden');
+resizeRenderer();
 renderHud();
 renderBattle();
 renderMenu();
@@ -929,5 +973,9 @@ window.__PMV2 = {
   forceWildEncounter,
   battleAction: playerAction,
   getState: () => structuredClone(state),
-  setStarter: chooseStarter
+  setStarter: chooseStarter,
+  warp: (areaId, x, z) => {
+    if (!AREAS[areaId]) return;
+    transitionToArea(areaId, x ?? AREAS[areaId].spawn.x, z ?? AREAS[areaId].spawn.z);
+  }
 };

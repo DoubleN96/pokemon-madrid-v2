@@ -1,13 +1,14 @@
 :root {
   color-scheme: light;
-  --ink: #111111;
-  --paper: rgba(255, 249, 236, 0.94);
-  --panel: rgba(255, 255, 255, 0.95);
-  --accent: #ff5a36;
-  --blue: #5188ff;
-  --green: #6ecf6b;
-  --gold: #f1c94d;
-  --purple: #5b4ccf;
+  --ink: #17151f;
+  --paper: rgba(250, 248, 242, 0.96);
+  --panel: rgba(255, 255, 255, 0.94);
+  --accent: #df5635;
+  --blue: #4e7ddb;
+  --green: #6cb05a;
+  --gold: #d4b14a;
+  --shell-top: #c2d2ef;
+  --shell-bottom: #9ea7bf;
 }
 
 * {
@@ -20,15 +21,202 @@ body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #dce8ff;
+  background:
+    radial-gradient(circle at top, #eef5ff 0%, #d0dcf0 48%, #a9b5cb 100%);
   color: var(--ink);
   font-family: "IBM Plex Sans", sans-serif;
+}
+
+body {
+  display: grid;
+  place-items: center;
+}
+
+#emulator-shell {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+#emulator-top {
+  width: min(88vw, 1120px);
+  aspect-ratio: 1.35 / 1;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.4) 0%, transparent 18%),
+    linear-gradient(180deg, var(--shell-top) 0%, #aab7d0 100%);
+  border: 5px solid rgba(23, 21, 31, 0.5);
+  border-bottom-width: 8px;
+  border-radius: 52px 52px 28px 28px;
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,0.55),
+    0 24px 80px rgba(28, 36, 55, 0.35);
+  display: grid;
+  grid-template-columns: 90px 1fr 90px;
+  align-items: center;
+  padding: 34px;
+}
+
+.speaker {
+  height: 72%;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle, rgba(0,0,0,0.25) 10%, transparent 12%) 0 0 / 12px 12px,
+    rgba(255,255,255,0.25);
+  border: 3px solid rgba(23, 21, 31, 0.22);
+}
+
+#screen-frame {
+  aspect-ratio: 1.38 / 1;
+  background: #4b5367;
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: inset 0 2px 0 rgba(255,255,255,0.15);
+}
+
+#screen-bezel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, #bad786 0%, #a9cb70 100%);
+  border: 4px solid #20242f;
 }
 
 #game {
   width: 100%;
   height: 100%;
   display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+#screen-glass {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(120deg, rgba(255,255,255,0.17) 5%, transparent 28%),
+    repeating-linear-gradient(180deg, rgba(255,255,255,0.03) 0 2px, rgba(0,0,0,0.02) 2px 4px);
+  pointer-events: none;
+}
+
+#emulator-hinge {
+  width: min(78vw, 980px);
+  height: 22px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #66728a 0%, #8f9ab0 100%);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+}
+
+#emulator-bottom {
+  width: min(80vw, 1000px);
+  height: min(24vh, 240px);
+  margin-top: -2px;
+  background:
+    linear-gradient(180deg, #a8b2c9 0%, var(--shell-bottom) 100%);
+  border: 5px solid rgba(23, 21, 31, 0.48);
+  border-top-width: 0;
+  border-radius: 0 0 42px 42px;
+  box-shadow: inset 0 2px 0 rgba(255,255,255,0.28);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 24px 34px;
+}
+
+#brand-badge {
+  font-family: "Press Start 2P", monospace;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  opacity: 0.75;
+}
+
+#console-controls {
+  display: flex;
+  align-items: center;
+  gap: 68px;
+}
+
+.console-dpad {
+  position: relative;
+  width: 120px;
+  height: 120px;
+}
+
+.console-dpad span {
+  position: absolute;
+  background: #323847;
+  box-shadow: inset 0 2px 0 rgba(255,255,255,0.15);
+}
+
+.console-dpad .up,
+.console-dpad .down {
+  width: 36px;
+  height: 50px;
+  left: 42px;
+}
+
+.console-dpad .left,
+.console-dpad .right {
+  width: 50px;
+  height: 36px;
+  top: 42px;
+}
+
+.console-dpad .up { top: 0; border-radius: 10px 10px 4px 4px; }
+.console-dpad .down { bottom: 0; border-radius: 4px 4px 10px 10px; }
+.console-dpad .left { left: 0; border-radius: 10px 4px 4px 10px; }
+.console-dpad .right { right: 0; border-radius: 4px 10px 10px 4px; }
+.console-dpad .center {
+  width: 38px;
+  height: 38px;
+  top: 41px;
+  left: 41px;
+  border-radius: 6px;
+}
+
+.console-actions {
+  position: relative;
+  width: 170px;
+  height: 110px;
+}
+
+.console-actions span {
+  position: absolute;
+  width: 62px;
+  height: 62px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-family: "Press Start 2P", monospace;
+  font-size: 18px;
+  color: white;
+  background: linear-gradient(180deg, #5e667d 0%, #323847 100%);
+  box-shadow: inset 0 2px 0 rgba(255,255,255,0.12);
+}
+
+.action-b { left: 0; bottom: 18px; }
+.action-a { right: 0; top: 0; }
+
+#console-start-select {
+  justify-self: end;
+  display: flex;
+  gap: 12px;
+}
+
+#console-start-select span {
+  width: 86px;
+  height: 18px;
+  border-radius: 999px;
+  background: #545d74;
+  color: white;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  letter-spacing: 0.04em;
 }
 
 #overlay {
@@ -42,9 +230,9 @@ body {
   position: fixed;
   border: 4px solid var(--ink);
   background: var(--panel);
-  box-shadow: 8px 8px 0 var(--ink);
-  border-radius: 22px;
-  padding: 16px;
+  box-shadow: 8px 8px 0 rgba(23, 21, 31, 0.88);
+  border-radius: 18px;
+  padding: 14px;
 }
 
 .compact {
@@ -54,18 +242,18 @@ body {
 #top-left {
   top: 18px;
   left: 18px;
-  width: min(470px, calc(100vw - 36px));
+  width: min(450px, calc(100vw - 36px));
 }
 
 #top-right {
   top: 18px;
   right: 18px;
-  width: min(240px, calc(100vw - 36px));
+  width: min(230px, calc(100vw - 36px));
 }
 
 #party-panel {
   right: 18px;
-  top: 250px;
+  top: 246px;
   width: min(260px, calc(100vw - 36px));
 }
 
@@ -85,9 +273,15 @@ body {
   gap: 16px;
 }
 
+.eyebrow,
+#brand,
+#area-name,
+#objective-text {
+  font-family: "Press Start 2P", monospace;
+}
+
 .eyebrow {
   margin: 0 0 10px;
-  font-family: "Press Start 2P", monospace;
   font-size: 10px;
   line-height: 1.6;
   text-transform: uppercase;
@@ -105,6 +299,17 @@ h2 {
   font-family: "Press Start 2P", monospace;
   font-size: clamp(16px, 2vw, 24px);
   line-height: 1.6;
+}
+
+#area-name,
+#objective-text {
+  font-size: 10px;
+  line-height: 1.6;
+  margin-top: 8px;
+}
+
+#world-status {
+  margin-top: 10px;
 }
 
 .hud-row {
@@ -174,7 +379,7 @@ h2 {
   max-height: min(88vh, 920px);
   overflow: auto;
   border: 4px solid var(--ink);
-  border-radius: 26px;
+  border-radius: 18px;
   background: #fff8ea;
   box-shadow: 10px 10px 0 var(--ink);
   padding: 24px;
@@ -191,9 +396,9 @@ button {
   font: inherit;
   cursor: pointer;
   border: 4px solid var(--ink);
-  border-radius: 18px;
+  border-radius: 12px;
   background: white;
-  box-shadow: 6px 6px 0 var(--ink);
+  box-shadow: 5px 5px 0 var(--ink);
   padding: 12px 14px;
 }
 
@@ -217,7 +422,7 @@ button:hover {
 .battle-log,
 .battle-actions {
   border: 4px solid var(--ink);
-  border-radius: 22px;
+  border-radius: 18px;
   background: #fffdf5;
   box-shadow: 8px 8px 0 var(--ink);
   padding: 16px;
@@ -235,7 +440,7 @@ button:hover {
   grid-column: 2;
   grid-row: 1 / span 2;
   border: 4px solid var(--ink);
-  border-radius: 24px;
+  border-radius: 20px;
   background: linear-gradient(180deg, #a3ecff 0%, #e3ffc0 100%);
   box-shadow: 8px 8px 0 var(--ink);
   min-height: 320px;
@@ -247,7 +452,7 @@ button:hover {
   position: absolute;
   width: 110px;
   height: 110px;
-  border-radius: 24px;
+  border-radius: 20px;
   border: 4px solid var(--ink);
   display: grid;
   place-items: center;
@@ -318,55 +523,114 @@ button:hover {
   gap: 6px;
 }
 
-.dpad button:nth-child(1) {
-  grid-column: 2;
-}
-
-.dpad button:nth-child(2) {
-  grid-column: 1;
-  grid-row: 2;
-}
-
-.dpad button:nth-child(3) {
-  grid-column: 2;
-  grid-row: 2;
-}
-
-.dpad button:nth-child(4) {
-  grid-column: 3;
-  grid-row: 2;
-}
+.dpad button:nth-child(1) { grid-column: 2; }
+.dpad button:nth-child(2) { grid-column: 1; grid-row: 2; }
+.dpad button:nth-child(3) { grid-column: 2; grid-row: 3; }
+.dpad button:nth-child(4) { grid-column: 3; grid-row: 2; }
 
 .ab-buttons {
   display: grid;
   grid-template-columns: repeat(2, 72px);
   gap: 10px;
+  align-content: center;
 }
 
-.a-btn {
-  background: var(--blue);
-  color: white;
-}
-
+.a-btn,
 .b-btn {
-  background: var(--accent);
-  color: white;
+  border-radius: 999px;
+  min-height: 72px;
 }
 
 #brand {
   position: fixed;
-  right: 18px;
-  bottom: 90px;
-  pointer-events: none;
-  font-size: 12px;
-  font-weight: 700;
-  color: rgba(17, 17, 17, 0.7);
+  top: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: rgba(23, 21, 31, 0.75);
 }
 
 @media (max-width: 1100px) {
+  #emulator-bottom,
+  #emulator-hinge {
+    display: none;
+  }
+
+  #emulator-top {
+    width: 100vw;
+    height: 100vh;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    grid-template-columns: 0 1fr 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .speaker,
+  #brand-badge,
+  #console-controls,
+  #console-start-select {
+    display: none;
+  }
+
+  #screen-frame {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    padding: 0;
+  }
+
+  #screen-bezel {
+    border: 0;
+    border-radius: 0;
+  }
+
   #top-right,
   #party-panel {
-    width: 220px;
+    right: 12px;
+  }
+
+  #top-left,
+  #interaction-panel,
+  #bottom-bar {
+    left: 12px;
+  }
+
+  #bottom-bar {
+    right: 12px;
+  }
+
+  #mobile-controls {
+    display: flex;
+  }
+}
+
+@media (max-width: 760px) {
+  #party-panel,
+  #interaction-panel {
+    display: none;
+  }
+
+  #top-left {
+    width: calc(100vw - 24px);
+  }
+
+  #top-right {
+    width: auto;
+    min-width: 164px;
+  }
+
+  #bottom-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    bottom: 118px;
+  }
+
+  .controls {
+    gap: 8px 12px;
+    font-size: 12px;
   }
 
   .battle-layout {
@@ -379,39 +643,5 @@ button:hover {
   .battle-actions {
     grid-column: auto;
     grid-row: auto;
-  }
-}
-
-@media (max-width: 900px) {
-  #top-left,
-  #top-right,
-  #party-panel,
-  #interaction-panel {
-    position: static;
-    width: 100%;
-  }
-
-  #overlay {
-    overflow: auto;
-    padding: 14px;
-  }
-
-  .panel {
-    box-shadow: 5px 5px 0 var(--ink);
-  }
-
-  #bottom-bar {
-    position: static;
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  #mobile-controls {
-    display: flex;
-  }
-
-  #brand {
-    position: static;
-    margin-top: 10px;
   }
 }
