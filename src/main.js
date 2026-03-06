@@ -59,6 +59,10 @@ const renderer = new THREE.WebGLRenderer({
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.setPixelRatio(1);
 
+const textureLoader = new THREE.TextureLoader();
+const areaTextures = {};
+let worldBackdrop = null;
+
 scene.add(new THREE.AmbientLight(0xffffff, 1.1));
 const sun = new THREE.DirectionalLight(0xfff4c8, 0.65);
 sun.position.set(12, 20, 8);
@@ -72,6 +76,20 @@ const pedestalMeshes = new Map();
 const itemMarkers = new Map();
 const npcMarkers = new Map();
 const portalMarkers = new Map();
+
+function configureTexture(texture) {
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.NearestFilter;
+  texture.magFilter = THREE.NearestFilter;
+  texture.generateMipmaps = false;
+  texture.wrapS = THREE.ClampToEdgeWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  return texture;
+}
+
+Object.entries(AREA_PREVIEWS).forEach(([areaId, src]) => {
+  areaTextures[areaId] = textureLoader.load(src, configureTexture);
+});
 
 const state = {
   starterChosen: false,
@@ -600,13 +618,19 @@ function clearWorld() {
   itemMarkers.clear();
   npcMarkers.clear();
   portalMarkers.clear();
+  worldBackdrop = null;
 }
 
-function buildTile(x, z, color, height = 0.6) {
+function buildTile(x, z, color, height = 0.08, opacity = 0.32) {
   const geometry = new THREE.BoxGeometry(1, height, 1);
-  const material = new THREE.MeshStandardMaterial({ color, flatShading: true });
+  const material = new THREE.MeshStandardMaterial({
+    color,
+    flatShading: true,
+    transparent: true,
+    opacity
+  });
   const mesh = new THREE.Mesh(geometry, material);
-  mesh.position.set(x, height / 2 - 0.3, z);
+  mesh.position.set(x, height / 2 - 0.44, z);
   worldGroup.add(mesh);
   tileMeshes.set(`${x},${z}`, mesh);
 }
@@ -619,19 +643,53 @@ function buildLandmark(landmark) {
   worldGroup.add(mesh);
 }
 
+function buildBackdrop(areaId) {
+  const texture = areaTextures[areaId];
+  if (!texture) return;
+  const base = new THREE.Mesh(
+    new THREE.PlaneGeometry(MAP_SIZE, MAP_SIZE),
+    new THREE.MeshBasicMaterial({ map: texture })
+  );
+  base.rotation.x = -Math.PI / 2;
+  base.position.set((MAP_SIZE - 1) / 2, -0.48, (MAP_SIZE - 1) / 2);
+  worldGroup.add(base);
+  worldBackdrop = base;
+}
+
+function makePixelTrainerTexture(primary = '#d94143', secondary = '#3356d7', skin = '#f7d7b5') {
+  const paint = document.createElement('canvas');
+  paint.width = 16;
+  paint.height = 24;
+  const ctx = paint.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, 16, 24);
+  ctx.fillStyle = secondary;
+  ctx.fillRect(4, 0, 8, 3);
+  ctx.fillRect(3, 3, 10, 2);
+  ctx.fillStyle = skin;
+  ctx.fillRect(4, 5, 8, 5);
+  ctx.fillStyle = primary;
+  ctx.fillRect(3, 10, 10, 7);
+  ctx.fillRect(2, 12, 2, 6);
+  ctx.fillRect(12, 12, 2, 6);
+  ctx.fillStyle = '#24324a';
+  ctx.fillRect(4, 17, 3, 7);
+  ctx.fillRect(9, 17, 3, 7);
+  return configureTexture(new THREE.CanvasTexture(paint));
+}
+
 function buildWorld() {
   clearWorld();
   const area = currentArea();
   scene.background = new THREE.Color(area.id === 'liga' ? 0xa5b4ff : 0xb8d878);
   scene.fog = new THREE.Fog(area.id === 'liga' ? 0xa5b4ff : 0xb8d878, 8, 22);
+  buildBackdrop(area.id);
 
   for (let z = 0; z < MAP_SIZE; z += 1) {
     for (let x = 0; x < MAP_SIZE; x += 1) {
-      let color = area.baseColor;
-      if (isGrass(x, z)) color = 0x69b84c;
-      if (area.specialTiles.center && x === area.specialTiles.center.x && z === area.specialTiles.center.z) color = 0xeaeff6;
-      if (area.specialTiles.sign && x === area.specialTiles.sign.x && z === area.specialTiles.sign.z) color = 0xb27039;
-      buildTile(x, z, color);
+      if (isGrass(x, z)) buildTile(x, z, 0x69b84c, 0.08, 0.28);
+      if (area.specialTiles.center && x === area.specialTiles.center.x && z === area.specialTiles.center.z) buildTile(x, z, 0xeaeff6, 0.09, 0.9);
+      if (area.specialTiles.sign && x === area.specialTiles.sign.x && z === area.specialTiles.sign.z) buildTile(x, z, 0xb27039, 0.09, 0.88);
     }
   }
 
@@ -648,11 +706,15 @@ function buildWorld() {
   });
 
   area.npcs.forEach((npc) => {
-    const marker = new THREE.Mesh(
-      new THREE.BoxGeometry(0.55, 0.85, 0.55),
-      new THREE.MeshStandardMaterial({ color: 0xf7efe0, flatShading: true })
+    const sprite = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: makePixelTrainerTexture('#7f7fe7', '#f1c456', '#f5ddc0'),
+        transparent: true
+      })
     );
-    marker.position.set(npc.x, 0.18, npc.z);
+    sprite.scale.set(1.1, 1.5, 1);
+    sprite.position.set(npc.x, 0.2, npc.z);
+    const marker = sprite;
     worldGroup.add(marker);
     npcMarkers.set(npc.id, marker);
   });
@@ -831,18 +893,13 @@ function cycleLeadMon() {
   saveGame();
 }
 
-const playerMesh = new THREE.Group();
-const body = new THREE.Mesh(
-  new THREE.BoxGeometry(0.68, 0.88, 0.68),
-  new THREE.MeshStandardMaterial({ color: 0xd94143, flatShading: true })
+const playerMesh = new THREE.Sprite(
+  new THREE.SpriteMaterial({
+    map: makePixelTrainerTexture(),
+    transparent: true
+  })
 );
-body.position.y = 0.2;
-const hat = new THREE.Mesh(
-  new THREE.BoxGeometry(0.72, 0.16, 0.72),
-  new THREE.MeshStandardMaterial({ color: 0x3356d7, flatShading: true })
-);
-hat.position.y = 0.72;
-playerMesh.add(body, hat);
+playerMesh.scale.set(1.15, 1.65, 1);
 scene.add(playerMesh);
 
 function updatePlayerMesh(dt) {
@@ -882,7 +939,7 @@ function highlightWorld(time) {
   });
 
   npcMarkers.forEach((mesh) => {
-    mesh.position.y = 0.18 + Math.sin(time * 0.003) * 0.04;
+    mesh.position.y = 0.2 + Math.sin(time * 0.003) * 0.04;
   });
 
   portalMarkers.forEach((mesh, portalId) => {
