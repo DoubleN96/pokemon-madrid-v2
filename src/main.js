@@ -1,11 +1,16 @@
 import * as THREE from 'three';
 import {
+  BLOCKED_TILES,
   GRASS_PATCHES,
+  ITEM_TILES,
+  LANDMARKS,
   MAP_SIZE,
+  NPCS,
   PEDESTALS,
   SPECIAL_TILES,
   SPECIES,
   STAGES,
+  STARTERS,
   WILD_TABLE
 } from './game-data.js';
 
@@ -42,7 +47,7 @@ const menuContentEl = document.getElementById('menu-content');
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x9ad9ff);
-scene.fog = new THREE.Fog(0x9ad9ff, 12, 32);
+scene.fog = new THREE.Fog(0x9ad9ff, 10, 36);
 
 const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 100);
 camera.position.set(9, 13, 15);
@@ -57,7 +62,7 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 scene.add(new THREE.AmbientLight(0xffffff, 0.95));
-const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+const sun = new THREE.DirectionalLight(0xffffff, 1.15);
 sun.position.set(12, 20, 10);
 scene.add(sun);
 
@@ -66,9 +71,19 @@ scene.add(worldGroup);
 
 const tileMeshes = new Map();
 const pedestalMeshes = new Map();
+const itemMarkers = new Map();
+const npcMarkers = new Map();
 
 const state = {
   starterChosen: false,
+  flags: {
+    talkedToMother: false,
+    metGaldos: false,
+    beatPablo: false,
+    sawLegendary: false
+  },
+  collectedItems: [],
+  consumedRewards: [],
   player: {
     x: 9,
     z: 10,
@@ -108,6 +123,21 @@ function defaultMon(speciesName, level = 5) {
   };
 }
 
+function evolveIfNeeded(mon) {
+  if (mon.species === 'Chulapon' && mon.level >= 16) mon.species = 'ChulaponPlus';
+  if (mon.species === 'ChulaponPlus' && mon.level >= 36) mon.species = 'Castizon';
+  if (mon.species === 'Gatolegre' && mon.level >= 16) mon.species = 'GatolegrePlus';
+  if (mon.species === 'GatolegrePlus' && mon.level >= 36) mon.species = 'Gatonoche';
+  if (mon.species === 'Azulejin' && mon.level >= 16) mon.species = 'Azulejon';
+  if (mon.species === 'Azulejon' && mon.level >= 36) mon.species = 'Mayolicon';
+  const data = SPECIES[mon.species];
+  mon.attack = data.attack + mon.level;
+  mon.defense = data.defense + Math.floor(mon.level / 2);
+  mon.skill = data.skill;
+  mon.maxHp = data.baseHp + mon.level * 4;
+  mon.hp = Math.min(mon.hp, mon.maxHp);
+}
+
 function saveGame() {
   localStorage.setItem(SAVE_KEY, JSON.stringify(state));
 }
@@ -116,25 +146,27 @@ function loadGame() {
   try {
     const saved = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
     if (!saved) return;
-    Object.assign(state, saved);
+    if (saved.player) state.player = { ...state.player, ...saved.player };
+    if (saved.flags) state.flags = { ...state.flags, ...saved.flags };
+    if (saved.collectedItems) state.collectedItems = saved.collectedItems;
+    if (saved.consumedRewards) state.consumedRewards = saved.consumedRewards;
+    if (saved.starterChosen != null) state.starterChosen = saved.starterChosen;
   } catch (_error) {
     // ignore malformed save
   }
 }
 
-function isGrass(x, z) {
-  return GRASS_PATCHES.some(
-    (patch) => x >= patch.x1 && x <= patch.x2 && z >= patch.z1 && z <= patch.z2
-  );
+function isInsidePatch(x, z, patch) {
+  return x >= patch.x1 && x <= patch.x2 && z >= patch.z1 && z <= patch.z2;
 }
 
-function isPedestal(x, z) {
-  return PEDESTALS.find((pedestal) => pedestal.x === x && pedestal.z === z);
+function isGrass(x, z) {
+  return GRASS_PATCHES.some((patch) => isInsidePatch(x, z, patch));
 }
 
 function isBlocked(x, z) {
   if (x < 0 || z < 0 || x >= MAP_SIZE || z >= MAP_SIZE) return true;
-  return false;
+  return BLOCKED_TILES.some((block) => isInsidePatch(x, z, block));
 }
 
 function stageById(id) {
@@ -162,6 +194,32 @@ function addBattleLog(text) {
   const line = document.createElement('p');
   line.textContent = text;
   battleLogListEl.prepend(line);
+}
+
+function rewardOnce(id) {
+  if (state.consumedRewards.includes(id)) return false;
+  state.consumedRewards.push(id);
+  return true;
+}
+
+function rewardPlayer(reward, id = null) {
+  if (id && !rewardOnce(id)) return;
+  if (!reward) return;
+  if (reward.type === 'item') {
+    state.player[reward.key] += reward.amount;
+  }
+}
+
+function nearestDistance(a, b) {
+  return Math.abs(a.x - b.x) + Math.abs(a.z - b.z);
+}
+
+function getNpcAt(x, z) {
+  return NPCS.find((npc) => npc.x === x && npc.z === z);
+}
+
+function getItemAt(x, z) {
+  return ITEM_TILES.find((item) => item.x === x && item.z === z && !state.collectedItems.includes(item.id));
 }
 
 function renderHud() {
@@ -203,8 +261,8 @@ function renderBattle() {
     battleScreenEl.classList.add('hidden');
     return;
   }
-
   battleScreenEl.classList.remove('hidden');
+
   const enemy = battle.enemyTeam[battle.enemyIndex];
   const player = state.player.party[state.player.activePartyIndex];
 
@@ -230,10 +288,11 @@ function renderMenu() {
   menuScreenEl.classList.remove('hidden');
   const next = nextStage();
   menuContentEl.innerHTML = `
-    <p><strong>Siguiente objetivo:</strong> ${next ? `${next.name} - ${next.title}` : 'Juego completado'}</p>
+    <p><strong>Siguiente objetivo:</strong> ${next ? `${next.name} - ${next.title}` : 'Liga completada'}</p>
     <p><strong>Medallas:</strong> ${state.player.badges.join(', ') || 'Ninguna'}</p>
-    <p><strong>Capturados:</strong> ${state.player.party.map((mon) => mon.species).join(', ')}</p>
-    <p><strong>Controles:</strong> Flechas/WASD mover, X interactuar, Z atras, Shift cambiar lead.</p>
+    <p><strong>Pokemon capturados:</strong> ${state.player.party.map((mon) => mon.species).join(', ') || 'Ninguno'}</p>
+    <p><strong>Flags:</strong> madre ${state.flags.talkedToMother ? 'ok' : 'pendiente'}, Galdos ${state.flags.metGaldos ? 'ok' : 'pendiente'}, Pablo ${state.flags.beatPablo ? 'ok' : 'pendiente'}</p>
+    <p><strong>Controles:</strong> Flechas/WASD mover · X interactuar · Z atras/huir · Shift cambiar lead · Enter menu.</p>
   `;
 }
 
@@ -246,7 +305,8 @@ function spawnBattle(type, payload) {
     ),
     enemyIndex: 0,
     trainerStageId: payload.stageId || null,
-    canRun: type === 'wild'
+    canRun: type === 'wild',
+    rewardCoins: payload.rewardCoins || 0
   };
   addBattleLog(payload.opening);
   renderBattle();
@@ -264,13 +324,21 @@ function tryWildEncounter() {
   });
 }
 
+function levelUpParty(amount = 1) {
+  state.player.party.forEach((mon) => {
+    mon.level += amount;
+    evolveIfNeeded(mon);
+    mon.hp = mon.maxHp;
+  });
+}
+
 function completeStage(stageId, reward) {
-  if (!state.player.completedStages.includes(stageId)) {
-    state.player.completedStages.push(stageId);
-    state.player.badges.push(reward);
-    state.player.level += 1;
-    state.player.coins += 100;
-  }
+  if (state.player.completedStages.includes(stageId)) return;
+  state.player.completedStages.push(stageId);
+  state.player.badges.push(reward);
+  state.player.level += 1;
+  state.player.coins += 120;
+  levelUpParty(1);
 }
 
 function endBattleWin() {
@@ -280,6 +348,7 @@ function endBattleWin() {
     completeStage(stage.id, stage.reward);
     worldStatusEl.textContent = `Has derrotado a ${stage.name}. ${stage.reward} conseguida.`;
   } else {
+    state.player.coins += 20;
     worldStatusEl.textContent = 'Combate ganado.';
   }
   state.battle = null;
@@ -319,7 +388,7 @@ function enemyTurn() {
   if (player.hp <= 0) {
     addBattleLog(`${player.species} cae debilitado.`);
     if (!swapToHealthyMon()) {
-      worldStatusEl.textContent = 'Has sido derrotado. Team Piso te devuelve al centro.';
+      worldStatusEl.textContent = 'Has sido derrotado. Vuelves al Centro Team Piso.';
       state.player.x = SPECIAL_TILES.center.x;
       state.player.z = SPECIAL_TILES.center.z + 1;
       state.player.party.forEach((mon) => {
@@ -362,8 +431,11 @@ function playerAction(action) {
   }
 
   if (action === 'switch') {
-    state.player.activePartyIndex =
-      (state.player.activePartyIndex + 1) % state.player.party.length;
+    if (state.player.party.length <= 1) {
+      addBattleLog('No tienes otro Pokemon para cambiar.');
+      return;
+    }
+    state.player.activePartyIndex = (state.player.activePartyIndex + 1) % state.player.party.length;
     addBattleLog(`Cambias a ${state.player.party[state.player.activePartyIndex].species}.`);
     renderHud();
     renderBattle();
@@ -380,9 +452,13 @@ function playerAction(action) {
       addBattleLog('No te quedan Pokeballs.');
       return;
     }
+    if (state.player.party.length >= 6) {
+      addBattleLog('Tu equipo esta lleno.');
+      return;
+    }
     state.player.balls -= 1;
     const catchChance = 0.35 + (1 - enemy.hp / enemy.maxHp) * 0.45;
-    if (Math.random() < catchChance && state.player.party.length < 6) {
+    if (Math.random() < catchChance) {
       state.player.party.push({ ...enemy });
       addBattleLog(`Captura completada: ${enemy.species} se une al equipo.`);
       state.battle = null;
@@ -425,12 +501,30 @@ function playerAction(action) {
   enemyTurn();
 }
 
-function nearestDistance(a, b) {
-  return Math.abs(a.x - b.x) + Math.abs(a.z - b.z);
-}
-
 function getInteraction() {
   const pos = { x: state.player.x, z: state.player.z };
+
+  const npc = NPCS.find((entry) => nearestDistance(pos, entry) <= 1);
+  if (npc) {
+    return {
+      kind: 'npc',
+      npc,
+      title: npc.title,
+      text: npc.text
+    };
+  }
+
+  const item = ITEM_TILES.find(
+    (entry) => nearestDistance(pos, entry) <= 0 && !state.collectedItems.includes(entry.id)
+  );
+  if (item) {
+    return {
+      kind: 'item',
+      item,
+      title: item.title,
+      text: `${item.text} Pulsa X para recogerlo.`
+    };
+  }
 
   if (nearestDistance(pos, SPECIAL_TILES.center) <= 1) {
     return {
@@ -444,7 +538,39 @@ function getInteraction() {
     return {
       kind: 'sign',
       title: 'Cartel de ruta',
-      text: 'Hispania Nova: hierba alta, lideres progresivos y Team Piso al fondo.'
+      text: 'Bravo Murillo conecta Tetuán, laboratorios, Metro y la primera ruta de gimnasios.'
+    };
+  }
+
+  if (nearestDistance(pos, SPECIAL_TILES.homeDoor) <= 1) {
+    return {
+      kind: 'home',
+      title: 'Bravo Murillo 37',
+      text: 'Tu casa. Mamá sigue esperando noticias de papá.'
+    };
+  }
+
+  if (nearestDistance(pos, SPECIAL_TILES.labDoor) <= 1) {
+    return {
+      kind: 'lab',
+      title: 'Laboratorio del Profesor Galdos',
+      text: 'Pulsa X para hablar con el profesor y revisar tu MadratNav.'
+    };
+  }
+
+  if (!state.flags.beatPablo && nearestDistance(pos, SPECIAL_TILES.rival) <= 1) {
+    return {
+      kind: 'rival',
+      title: 'Pablo',
+      text: 'Tu rival de siempre. Pulsa X para aceptar el combate.'
+    };
+  }
+
+  if (state.player.completedStages.includes('marcelino') && nearestDistance(pos, SPECIAL_TILES.legendary) <= 1) {
+    return {
+      kind: 'legendary',
+      title: 'Orson Regio',
+      text: 'Pulsa X para desafiar al legendario final.'
     };
   }
 
@@ -459,16 +585,8 @@ function getInteraction() {
       stage,
       unlocked,
       completed,
-      title: completed
-        ? `${stage.name} completado`
-        : unlocked
-          ? `${stage.name} disponible`
-          : `${stage.name} bloqueado`,
-      text: completed
-        ? stage.text
-        : unlocked
-          ? `${stage.title}. Pulsa X para combatir.`
-          : 'Todavia no puedes desafiar este pedestal.'
+      title: completed ? `${stage.name} completado` : unlocked ? `${stage.name} disponible` : `${stage.name} bloqueado`,
+      text: completed ? stage.text : unlocked ? `${stage.title}. Pulsa X para combatir.` : 'Todavia no puedes desafiar este gimnasio.'
     };
   }
 
@@ -478,6 +596,28 @@ function getInteraction() {
 function interact() {
   const interaction = getInteraction();
   if (!interaction) return;
+
+  if (interaction.kind === 'npc') {
+    const { npc } = interaction;
+    worldStatusEl.textContent = npc.text;
+    if (npc.id === 'madre') state.flags.talkedToMother = true;
+    if (npc.id === 'galdos') state.flags.metGaldos = true;
+    rewardPlayer(npc.reward, `npc-${npc.id}`);
+    renderHud();
+    saveGame();
+    return;
+  }
+
+  if (interaction.kind === 'item') {
+    state.collectedItems.push(interaction.item.id);
+    rewardPlayer(interaction.item.reward);
+    worldStatusEl.textContent = interaction.item.text;
+    const marker = itemMarkers.get(interaction.item.id);
+    if (marker) marker.visible = false;
+    renderHud();
+    saveGame();
+    return;
+  }
 
   if (interaction.kind === 'center') {
     state.player.party.forEach((mon) => {
@@ -489,8 +629,41 @@ function interact() {
     return;
   }
 
-  if (interaction.kind === 'sign') {
+  if (interaction.kind === 'sign' || interaction.kind === 'home') {
     worldStatusEl.textContent = interaction.text;
+    return;
+  }
+
+  if (interaction.kind === 'lab') {
+    state.flags.metGaldos = true;
+    worldStatusEl.textContent =
+      'Profesor Galdos: Madrid esta lleno de historias, captura Pokemon y avanza por los gimnasios.';
+    renderHud();
+    saveGame();
+    return;
+  }
+
+  if (interaction.kind === 'rival') {
+    spawnBattle('trainer', {
+      team: ['Ratamad', 'Pichoneta', 'Eevee'],
+      baseLevel: 5,
+      stageId: null,
+      opening: 'Pablo: "Siempre compitiendo por todo. Vamos a ver si vales para esto."'
+    });
+    state.flags.beatPablo = true;
+    saveGame();
+    return;
+  }
+
+  if (interaction.kind === 'legendary') {
+    spawnBattle('trainer', {
+      team: [defaultMon('OrsonRegio', 18)],
+      baseLevel: 18,
+      stageId: null,
+      opening: 'Orson Regio ruge frente al skyline de Madrid.'
+    });
+    state.flags.sawLegendary = true;
+    saveGame();
     return;
   }
 
@@ -505,6 +678,7 @@ function interact() {
       stageId: interaction.stage.id,
       opening: `${interaction.stage.name}: "${interaction.stage.quote}"`
     });
+    return;
   }
 }
 
@@ -548,8 +722,7 @@ function toggleMenu() {
 
 function cycleLeadMon() {
   if (state.battle || state.player.party.length <= 1) return;
-  state.player.activePartyIndex =
-    (state.player.activePartyIndex + 1) % state.player.party.length;
+  state.player.activePartyIndex = (state.player.activePartyIndex + 1) % state.player.party.length;
   worldStatusEl.textContent = `Ahora lidera ${state.player.party[state.player.activePartyIndex].species}.`;
   renderHud();
   saveGame();
@@ -564,6 +737,14 @@ function buildTile(x, z, color, height = 0.4) {
   tileMeshes.set(`${x},${z}`, mesh);
 }
 
+function buildLandmark(landmark) {
+  const geometry = new THREE.BoxGeometry(landmark.width, 1.8, landmark.depth);
+  const material = new THREE.MeshStandardMaterial({ color: landmark.color });
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.position.set(landmark.x, 1.1, landmark.z);
+  worldGroup.add(mesh);
+}
+
 function buildWorld() {
   for (let z = 0; z < MAP_SIZE; z += 1) {
     for (let x = 0; x < MAP_SIZE; x += 1) {
@@ -575,6 +756,8 @@ function buildWorld() {
     }
   }
 
+  LANDMARKS.forEach(buildLandmark);
+
   PEDESTALS.forEach((pedestal) => {
     const base = new THREE.Mesh(
       new THREE.CylinderGeometry(0.34, 0.48, 1.2, 10),
@@ -583,6 +766,26 @@ function buildWorld() {
     base.position.set(pedestal.x, 1.0, pedestal.z);
     worldGroup.add(base);
     pedestalMeshes.set(pedestal.stageId, base);
+  });
+
+  NPCS.forEach((npc) => {
+    const marker = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.22, 0.6, 4, 8),
+      new THREE.MeshStandardMaterial({ color: 0xfff6d1 })
+    );
+    marker.position.set(npc.x, 0.75, npc.z);
+    worldGroup.add(marker);
+    npcMarkers.set(npc.id, marker);
+  });
+
+  ITEM_TILES.forEach((item) => {
+    const marker = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.28),
+      new THREE.MeshStandardMaterial({ color: 0xffdc4e, emissive: 0x664c00 })
+    );
+    marker.position.set(item.x, 0.7, item.z);
+    worldGroup.add(marker);
+    itemMarkers.set(item.id, marker);
   });
 }
 
@@ -621,31 +824,40 @@ function updatePlayerMesh(dt) {
   camera.lookAt(playerMesh.position.x, 0.4, playerMesh.position.z + 0.4);
 }
 
-function highlightPedestals(time) {
+function highlightWorld(time) {
   const next = nextStage();
   pedestalMeshes.forEach((mesh, stageId) => {
     const completed = state.player.completedStages.includes(stageId);
     const active = next && next.id === stageId;
     mesh.position.y = active ? 1 + Math.sin(time * 0.004) * 0.12 : 1;
-    mesh.material.emissive = new THREE.Color(
-      completed ? 0x1e6a1e : active ? 0x4224aa : 0x000000
-    );
+    mesh.material.emissive = new THREE.Color(completed ? 0x1e6a1e : active ? 0x4224aa : 0x000000);
+  });
+
+  itemMarkers.forEach((mesh, itemId) => {
+    mesh.visible = !state.collectedItems.includes(itemId);
+    mesh.rotation.y += 0.04;
+  });
+
+  npcMarkers.forEach((mesh) => {
+    mesh.position.y = 0.78 + Math.sin(time * 0.003) * 0.05;
   });
 }
 
+function chooseStarter(speciesName) {
+  state.player.party = [defaultMon(speciesName, 5)];
+  state.player.activePartyIndex = 0;
+  state.starterChosen = true;
+  starterScreenEl.classList.add('hidden');
+  worldStatusEl.textContent = `${speciesName} se une al equipo. Sal a explorar Tetuán.`;
+  renderHud();
+  saveGame();
+}
+
 function initStarterButtons() {
-  ['Charmander', 'Squirtle', 'Bulbasaur'].forEach((speciesName) => {
+  STARTERS.forEach((speciesName) => {
     const button = document.createElement('button');
     button.textContent = speciesName;
-    button.addEventListener('click', () => {
-      state.player.party = [defaultMon(speciesName, 5)];
-      state.player.activePartyIndex = 0;
-      state.starterChosen = true;
-      starterScreenEl.classList.add('hidden');
-      worldStatusEl.textContent = `${speciesName} se une al equipo. Sal a explorar.`;
-      renderHud();
-      saveGame();
-    });
+    button.addEventListener('click', () => chooseStarter(speciesName));
     starterOptionsEl.appendChild(button);
   });
 }
@@ -695,7 +907,7 @@ window.addEventListener('resize', () => {
 function animate(time) {
   requestAnimationFrame(animate);
   updatePlayerMesh(0.016);
-  highlightPedestals(time);
+  highlightWorld(time);
   renderMenu();
   renderer.render(scene, camera);
 }
@@ -717,12 +929,5 @@ window.__PMV2 = {
   forceWildEncounter,
   battleAction: playerAction,
   getState: () => structuredClone(state),
-  setStarter: (name) => {
-    state.player.party = [defaultMon(name, 5)];
-    state.player.activePartyIndex = 0;
-    state.starterChosen = true;
-    starterScreenEl.classList.add('hidden');
-    renderHud();
-    saveGame();
-  }
+  setStarter: chooseStarter
 };
