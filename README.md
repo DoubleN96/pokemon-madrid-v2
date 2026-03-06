@@ -1,6 +1,6 @@
 # Pokemon Madrid V2
 
-Repositorio del RPG web inspirado en el documento fuente de Team Piso.
+Repositorio del RPG web 3D inspirado en el documento fuente de Team Piso y en la estructura de un Pokemon de GBA.
 
 ## Referencia principal
 
@@ -9,7 +9,10 @@ Repositorio del RPG web inspirado en el documento fuente de Team Piso.
 ## Contenido
 
 - `PROMPT.md`: prompt base y contexto operativo.
-- `index.html`: campaña completa estilo GBA-web con 13 etapas, side quests, guardado y controles GBA SP.
+- `index.html`: entrada principal del RPG 3D.
+- `style.css`: HUD, overlays y visual GBA-web.
+- `src/main.js`: mundo 3D, movimiento, encuentros, combates, capturas y guardado.
+- `src/game-data.js`: especies, stages y layout del mapa.
 - `Dockerfile`: imagen minima con `nginx:alpine`.
 - `default.conf`: configuracion simple para servir la app.
 

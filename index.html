@@ -6,7 +6,7 @@
     <title>Pokemon: La Caida del Imperio</title>
     <meta
       name="description"
-      content="RPG web inspirado en el documento fuente de Pokemon Madrid Team Piso, con progresion completa, login en Supabase y guardado."
+      content="RPG web 3D inspirado en Pokemon Rojo Fuego y el lore de Team Piso. Movimiento, capturas, combates y progresion completa."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -14,1384 +14,153 @@
       href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=IBM+Plex+Sans:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              ink: '#101010',
-              paper: '#f7f0df',
-              ember: '#ef6a42',
-              wave: '#4eb8ff',
-              moss: '#7dd66f',
-              gold: '#f3c841',
-              void: '#2a2554',
-              candy: '#ffe6fb'
-            },
-            fontFamily: {
-              pixel: ['"Press Start 2P"', 'monospace'],
-              body: ['"IBM Plex Sans"', 'sans-serif']
-            },
-            boxShadow: {
-              brutal: '8px 8px 0 #101010'
-            }
-          }
+    <link rel="stylesheet" href="./style.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js"
         }
-      };
+      }
     </script>
   </head>
-  <body class="bg-paper font-body text-ink">
-    <main class="min-h-screen bg-[linear-gradient(180deg,_#fff8ea_0%,_#f1f5ff_40%,_#f7f0df_100%)]">
-      <section class="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-10">
-        <div class="rounded-[2rem] border-4 border-ink bg-white p-6 shadow-brutal md:p-8">
-          <div class="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
-            <div class="max-w-4xl">
-              <p class="inline-flex rounded-full border-4 border-ink bg-gold px-4 py-2 font-pixel text-[10px] uppercase leading-5">
-                RPG web completo inspirado en el lore del documento
-              </p>
-              <h1 class="mt-5 font-pixel text-2xl uppercase leading-[1.6] md:text-4xl md:leading-[1.5]">
-                Pokemon:<br />
-                La Caida del Imperio
-              </h1>
-              <p class="mt-5 max-w-3xl text-base leading-8 md:text-lg">
-                Version expandida del universo Team Piso. Recorres Hispania Nova,
-                derrotas ocho lideres progresivos, entras en la Liga, tumbas al
-                Movimiento Barrera y cierras la historia contra Marcelino. Todo
-                con guardado local o en Supabase.
-              </p>
-              <div class="mt-6 flex flex-wrap gap-3 text-sm font-bold">
-                <a
-                  class="rounded-full border-4 border-ink bg-wave px-4 py-3 shadow-brutal transition hover:-translate-y-1"
-                  href="https://docs.google.com/document/d/1TXwBYnG3GU6KyckGEkcI4A6ZZcIZvrGQgk9g4vrDZlg/edit?usp=drivesdk"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Ver documento fuente
-                </a>
-                <a
-                  class="rounded-full border-4 border-ink bg-ember px-4 py-3 text-white shadow-brutal transition hover:-translate-y-1"
-                  href="https://buy.stripe.com/14AbJ11DE0bKgO64ry3wQ06"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Boton Stripe 100EUR
-                </a>
-              </div>
-            </div>
+  <body>
+    <canvas id="game"></canvas>
 
-            <aside class="w-full max-w-md rounded-[1.5rem] border-4 border-ink bg-paper p-4 shadow-brutal">
-              <div class="flex items-start justify-between gap-3">
-                <div>
-                  <p class="font-pixel text-[10px] uppercase leading-5">Sesion y guardado</p>
-                  <p id="auth-status" class="mt-2 text-sm font-bold">Modo invitado</p>
-                </div>
-                <div class="rounded-full border-4 border-ink bg-white px-3 py-1 text-xs font-bold uppercase">
-                  Supabase
-                </div>
-              </div>
+    <div id="overlay">
+      <div id="top-left" class="panel">
+        <p class="eyebrow">Pokemon FireRed Web x Team Piso</p>
+        <h1>La Caida del Imperio</h1>
+        <p id="world-status">Muevete por el mapa, pisa hierba alta y pulsa X para interactuar.</p>
+      </div>
 
-              <div class="mt-4 rounded-2xl border-4 border-ink bg-white p-4">
-                <p class="text-xs font-bold uppercase">Usuario demo</p>
-                <p class="mt-2 text-sm leading-7">
-                  Telefono: <span class="font-bold">+34600000123</span><br />
-                  Password: <span class="font-bold">PokemonMadridV2!2026</span>
-                </p>
-                <div class="mt-4 flex flex-wrap gap-3">
-                  <button
-                    id="login-button"
-                    class="rounded-full border-4 border-ink bg-moss px-4 py-2 font-bold uppercase shadow-brutal transition hover:-translate-y-1"
-                  >
-                    Entrar con demo
-                  </button>
-                  <button
-                    id="logout-button"
-                    class="rounded-full border-4 border-ink bg-paper px-4 py-2 font-bold uppercase shadow-brutal transition hover:-translate-y-1"
-                  >
-                    Cerrar sesion
-                  </button>
-                </div>
-              </div>
+      <div id="top-right" class="panel compact">
+        <div class="hud-row">
+          <span>Nivel</span>
+          <strong id="player-level">5</strong>
+        </div>
+        <div class="hud-row">
+          <span>Monedas</span>
+          <strong id="player-coins">120</strong>
+        </div>
+        <div class="hud-row">
+          <span>Medallas</span>
+          <strong id="player-badges">0</strong>
+        </div>
+        <div class="hud-row">
+          <span>Pokeballs</span>
+          <strong id="player-balls">5</strong>
+        </div>
+        <div class="hud-row">
+          <span>Pociones</span>
+          <strong id="player-potions">3</strong>
+        </div>
+      </div>
 
-              <div class="mt-4 grid grid-cols-2 gap-3">
-                <div class="rounded-2xl border-4 border-ink bg-moss p-4">
-                  <p class="text-xs font-bold uppercase">Nivel</p>
-                  <p id="player-level" class="mt-2 text-3xl font-black">1</p>
-                </div>
-                <div class="rounded-2xl border-4 border-ink bg-wave p-4">
-                  <p class="text-xs font-bold uppercase">Ptas</p>
-                  <p id="player-coins" class="mt-2 text-3xl font-black">120</p>
-                </div>
-                <div class="rounded-2xl border-4 border-ink bg-gold p-4">
-                  <p class="text-xs font-bold uppercase">Medallas</p>
-                  <p id="player-badges" class="mt-2 text-3xl font-black">0</p>
-                </div>
-                <div class="rounded-2xl border-4 border-ink bg-candy p-4">
-                  <p class="text-xs font-bold uppercase">Pociones</p>
-                  <p id="player-potions" class="mt-2 text-3xl font-black">3</p>
-                </div>
-              </div>
+      <div id="party-panel" class="panel">
+        <p class="eyebrow">Party</p>
+        <div id="party-list"></div>
+      </div>
 
-              <div class="mt-4 rounded-2xl border-4 border-ink bg-void p-4 text-white">
-                <p class="text-xs font-bold uppercase">Perfil persistido</p>
-                <p id="player-name" class="mt-2 text-sm font-bold">Entrenador anonimo</p>
-                <p id="starter-name" class="mt-2 text-sm">Starter: pendiente</p>
-                <p id="save-mode" class="mt-1 text-sm">Guardado: local</p>
-                <p id="story-state" class="mt-1 text-sm">Historia: Acto I</p>
-              </div>
-            </aside>
+      <div id="interaction-panel" class="panel hidden">
+        <p class="eyebrow">Interaccion</p>
+        <h2 id="interaction-title">Nada cerca</h2>
+        <p id="interaction-text">Acercate a un gimnasio, Centro Team Piso o portal.</p>
+      </div>
+
+      <div id="bottom-bar" class="panel">
+        <div class="controls">
+          <span>Flechas / WASD: mover</span>
+          <span>X: A / interactuar</span>
+          <span>Z: B / atras</span>
+          <span>Enter: Start menu</span>
+          <span>Shift: Select party</span>
+        </div>
+        <a id="stripe-button" href="https://buy.stripe.com/14AbJ11DE0bKgO64ry3wQ06" target="_blank" rel="noreferrer">
+          Stratoma AI 100EUR
+        </a>
+      </div>
+
+      <div id="menu-screen" class="modal hidden">
+        <div class="modal-card">
+          <p class="eyebrow">Menu</p>
+          <h2>Bitacora del entrenador</h2>
+          <div id="menu-content"></div>
+          <button class="menu-close" data-close-menu="true">Cerrar menu</button>
+        </div>
+      </div>
+
+      <div id="starter-screen" class="modal">
+        <div class="modal-card">
+          <p class="eyebrow">Starter</p>
+          <h2>Elige tu primer Pokemon</h2>
+          <p>
+            La aventura arranca en Hispania Nova. Elige starter y sal a capturar,
+            explorar y tumbar toda la Liga Team Piso.
+          </p>
+          <div id="starter-options" class="button-grid"></div>
+        </div>
+      </div>
+
+      <div id="battle-screen" class="modal hidden">
+        <div class="battle-layout">
+          <div class="battle-card enemy">
+            <p class="eyebrow" id="battle-type">Combate</p>
+            <h2 id="enemy-name">Rival</h2>
+            <p id="enemy-level">Nivel 1</p>
+            <div class="hp-wrap"><div id="enemy-hp-bar" class="hp-bar"></div></div>
+            <p id="enemy-hp-text">HP 10 / 10</p>
           </div>
-        </div>
-      </section>
 
-      <section class="mx-auto grid max-w-7xl gap-6 px-4 pb-6 md:px-6 xl:grid-cols-[1.2fr_1.1fr_0.9fr]">
-        <div class="space-y-6">
-          <section class="rounded-[2rem] border-4 border-ink bg-white p-5 shadow-brutal md:p-6">
-            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <p class="font-pixel text-[10px] uppercase leading-5">Starter y build</p>
-                <p class="mt-3 max-w-2xl text-base leading-8">
-                  Elige tu starter. La build del jugador evoluciona con las medallas
-                  y side quests completadas.
-                </p>
-              </div>
-              <div class="flex flex-wrap gap-3">
-                <button
-                  class="starter-button rounded-full border-4 border-ink bg-ember px-4 py-3 font-bold uppercase text-white shadow-brutal transition hover:-translate-y-1"
-                  data-starter="Charmander"
-                >
-                  Charmander
-                </button>
-                <button
-                  class="starter-button rounded-full border-4 border-ink bg-wave px-4 py-3 font-bold uppercase shadow-brutal transition hover:-translate-y-1"
-                  data-starter="Squirtle"
-                >
-                  Squirtle
-                </button>
-                <button
-                  class="starter-button rounded-full border-4 border-ink bg-moss px-4 py-3 font-bold uppercase shadow-brutal transition hover:-translate-y-1"
-                  data-starter="Bulbasaur"
-                >
-                  Bulbasaur
-                </button>
-              </div>
-            </div>
-            <div class="mt-5 grid gap-4 md:grid-cols-3">
-              <div class="rounded-2xl border-4 border-ink bg-paper p-4">
-                <p class="text-xs font-bold uppercase">Ataque</p>
-                <p id="stat-attack" class="mt-2 text-3xl font-black">10</p>
-              </div>
-              <div class="rounded-2xl border-4 border-ink bg-paper p-4">
-                <p class="text-xs font-bold uppercase">Defensa</p>
-                <p id="stat-defense" class="mt-2 text-3xl font-black">8</p>
-              </div>
-              <div class="rounded-2xl border-4 border-ink bg-paper p-4">
-                <p class="text-xs font-bold uppercase">Carisma</p>
-                <p id="stat-charisma" class="mt-2 text-3xl font-black">7</p>
-              </div>
-            </div>
-            <div class="mt-5 rounded-2xl border-4 border-ink bg-void p-4 text-white">
-              <p class="font-pixel text-[10px] uppercase leading-5">Controles GBA SP</p>
-              <p id="control-mode" class="mt-3 text-sm font-bold">Modo: mapa</p>
-              <p id="control-selection" class="mt-2 text-sm">Seleccion: ninguna</p>
-              <p class="mt-3 text-xs leading-6 opacity-90">
-                Teclado: flechas = cruceta, <strong>X</strong> = A, <strong>Z</strong> = B,
-                <strong>Enter</strong> = Start, <strong>Shift</strong> = Select.
-              </p>
-            </div>
-          </section>
-
-          <section class="rounded-[2rem] border-4 border-ink bg-white p-5 shadow-brutal md:p-6">
-            <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p class="font-pixel text-[10px] uppercase leading-5">Historia principal</p>
-                <h2 id="stage-title" class="mt-3 text-2xl font-black">Selecciona una etapa</h2>
-                <p id="stage-region" class="mt-1 text-sm font-bold uppercase text-zinc-600">Region</p>
-              </div>
-              <div class="rounded-full border-4 border-ink bg-gold px-4 py-2 font-bold uppercase">
-                <span id="stage-kind">Etapa</span>
-              </div>
-            </div>
-            <p id="stage-description" class="mt-5 text-base leading-8">
-              Elige una etapa del mapa para ver su historia y abrir el combate.
-            </p>
-            <div class="mt-5 grid gap-4 md:grid-cols-2">
-              <div class="rounded-2xl border-4 border-ink bg-paper p-4">
-                <p class="text-xs font-bold uppercase">Entrenador rival</p>
-                <p id="stage-foe" class="mt-2 text-lg font-black">-</p>
-                <p id="stage-quote" class="mt-3 text-sm italic">-</p>
-              </div>
-              <div class="rounded-2xl border-4 border-ink bg-paper p-4">
-                <p class="text-xs font-bold uppercase">Recompensa</p>
-                <p id="stage-reward" class="mt-2 text-lg font-black">-</p>
-                <p id="stage-team" class="mt-3 text-sm leading-7">-</p>
-              </div>
-            </div>
-            <div class="mt-5 flex flex-wrap gap-3">
-              <button
-                id="start-battle-button"
-                class="rounded-full border-4 border-ink bg-ember px-5 py-3 font-bold uppercase text-white shadow-brutal transition hover:-translate-y-1"
-              >
-                Iniciar combate
-              </button>
-              <button
-                id="reset-run-button"
-                class="rounded-full border-4 border-ink bg-paper px-5 py-3 font-bold uppercase shadow-brutal transition hover:-translate-y-1"
-              >
-                Reiniciar partida
-              </button>
-            </div>
-          </section>
-
-          <section class="rounded-[2rem] border-4 border-ink bg-white p-5 shadow-brutal md:p-6">
-            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <p class="font-pixel text-[10px] uppercase leading-5">Arena de combate</p>
-                <p class="mt-3 text-base leading-8">
-                  Combate por turnos, simple pero completo. Las side quests mejoran
-                  tus stats y cambian la dificultad real de la Liga.
-                </p>
-              </div>
-              <div class="rounded-full border-4 border-ink bg-void px-4 py-2 text-sm font-bold uppercase text-white">
-                Turno tactico
-              </div>
-            </div>
-
-            <div class="mt-5 grid gap-4 lg:grid-cols-2">
-              <div class="rounded-2xl border-4 border-ink bg-moss p-4">
-                <p class="text-xs font-bold uppercase">Tu equipo</p>
-                <p id="battle-player-name" class="mt-2 text-xl font-black">Entrenador</p>
-                <p id="battle-player-hp" class="mt-2 text-sm font-bold">HP 0 / 0</p>
-                <div class="mt-3 h-4 overflow-hidden rounded-full border-4 border-ink bg-white">
-                  <div id="player-hp-bar" class="h-full bg-void" style="width: 100%"></div>
-                </div>
-              </div>
-              <div class="rounded-2xl border-4 border-ink bg-ember p-4 text-white">
-                <p class="text-xs font-bold uppercase">Rival</p>
-                <p id="battle-enemy-name" class="mt-2 text-xl font-black">Sin rival</p>
-                <p id="battle-enemy-hp" class="mt-2 text-sm font-bold">HP 0 / 0</p>
-                <div class="mt-3 h-4 overflow-hidden rounded-full border-4 border-ink bg-white">
-                  <div id="enemy-hp-bar" class="h-full bg-ink" style="width: 100%"></div>
-                </div>
-              </div>
-            </div>
-
-            <div class="mt-5 flex flex-wrap gap-3">
-              <button
-                class="battle-action rounded-full border-4 border-ink bg-wave px-4 py-3 font-bold uppercase shadow-brutal transition hover:-translate-y-1"
-                data-action="attack"
-              >
-                Ataque
-              </button>
-              <button
-                class="battle-action rounded-full border-4 border-ink bg-gold px-4 py-3 font-bold uppercase shadow-brutal transition hover:-translate-y-1"
-                data-action="skill"
-              >
-                Tecnica
-              </button>
-              <button
-                class="battle-action rounded-full border-4 border-ink bg-candy px-4 py-3 font-bold uppercase shadow-brutal transition hover:-translate-y-1"
-                data-action="guard"
-              >
-                Defensa
-              </button>
-              <button
-                class="battle-action rounded-full border-4 border-ink bg-paper px-4 py-3 font-bold uppercase shadow-brutal transition hover:-translate-y-1"
-                data-action="heal"
-              >
-                Pocion
-              </button>
-            </div>
-
-            <div class="mt-5 rounded-2xl border-4 border-ink bg-ink p-4 text-paper">
-              <p class="text-xs font-bold uppercase">Log</p>
-              <div id="battle-log" class="mt-3 max-h-64 space-y-3 overflow-auto text-sm leading-7">
-                <p>La aventura empieza eligiendo un starter y una etapa del mapa.</p>
-              </div>
-            </div>
-          </section>
-        </div>
-
-        <div class="space-y-6">
-          <section class="rounded-[2rem] border-4 border-ink bg-white p-5 shadow-brutal md:p-6">
-            <div class="flex items-center justify-between gap-3">
-              <div>
-                <p class="font-pixel text-[10px] uppercase leading-5">Mapa de Hispania Nova</p>
-                <p class="mt-2 text-base leading-8">
-                  La campaña completa toma el orden progresivo del documento:
-                  gimnasios, Liga, Barrera y campeon final.
-                </p>
-              </div>
-              <div class="rounded-full border-4 border-ink bg-wave px-4 py-2 font-bold uppercase">
-                13 etapas
-              </div>
-            </div>
-            <div id="stage-list" class="mt-5 grid gap-4"></div>
-          </section>
-
-          <section class="rounded-[2rem] border-4 border-ink bg-white p-5 shadow-brutal md:p-6">
-            <div class="flex items-center justify-between gap-3">
-              <div>
-                <p class="font-pixel text-[10px] uppercase leading-5">Side quests</p>
-                <p class="mt-2 text-base leading-8">
-                  Inspiradas en historia, finanzas, tecnologia y humor del lore.
-                </p>
-              </div>
-              <div class="rounded-full border-4 border-ink bg-moss px-4 py-2 font-bold uppercase">
-                Bonus reales
-              </div>
-            </div>
-            <div id="quest-list" class="mt-5 grid gap-4"></div>
-          </section>
-        </div>
-
-        <div class="space-y-6">
-          <section class="rounded-[2rem] border-4 border-ink bg-white p-5 shadow-brutal md:p-6">
-            <p class="font-pixel text-[10px] uppercase leading-5">Actos narrativos</p>
-            <div class="mt-4 space-y-4">
-              <div class="rounded-2xl border-4 border-ink bg-paper p-4">
-                <p class="text-xs font-bold uppercase">Acto I</p>
-                <p class="mt-2 text-sm leading-7">
-                  Reconstruir Hispania Nova derrotando lideres que representan ego,
-                  caos, contratos, corrupcion y renta eterna.
-                </p>
-              </div>
-              <div class="rounded-2xl border-4 border-ink bg-paper p-4">
-                <p class="text-xs font-bold uppercase">Acto II</p>
-                <p class="mt-2 text-sm leading-7">
-                  Ascenso a la Liga Team Piso: Alex, Alvaro y el retorno toxico de
-                  Jesus con pelo nuevo.
-                </p>
-              </div>
-              <div class="rounded-2xl border-4 border-ink bg-paper p-4">
-                <p class="text-xs font-bold uppercase">Acto III</p>
-                <p class="mt-2 text-sm leading-7">
-                  Derrotar a Adrian Barrera y cerrar la historia contra Marcelino,
-                  campeon supremo del caos eficiente.
-                </p>
-              </div>
-            </div>
-          </section>
-
-          <section class="rounded-[2rem] border-4 border-ink bg-white p-5 shadow-brutal md:p-6">
-            <p class="font-pixel text-[10px] uppercase leading-5">Codex rapido</p>
-            <div id="codex-list" class="mt-4 space-y-3 text-sm leading-7"></div>
-          </section>
-        </div>
-      </section>
-
-      <footer class="border-t-4 border-ink bg-ink px-4 py-8 text-paper md:px-6">
-        <div class="mx-auto flex max-w-7xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p class="font-pixel text-sm uppercase leading-6">Stratoma AI</p>
-            <p class="mt-2 text-sm">
-              Esta version usa el lore real del documento para construir una campaña
-              web completa. No es un ROM de GBA, pero ya es un RPG jugable de punta a punta.
-            </p>
+          <div class="battle-scene">
+            <div class="monster-chip enemy-chip" id="enemy-chip">?</div>
+            <div class="monster-chip player-chip" id="player-chip">?</div>
           </div>
-          <a
-            class="inline-flex w-fit rounded-full border-4 border-paper bg-gold px-5 py-3 font-bold uppercase text-ink transition hover:-translate-y-1"
-            href="https://buy.stripe.com/14AbJ11DE0bKgO64ry3wQ06"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Comprar acceso 100EUR
-          </a>
-        </div>
-      </footer>
 
-      <div class="pointer-events-none fixed bottom-4 right-4 z-50 hidden xl:block">
-        <div class="pointer-events-auto w-[360px] rounded-[2.4rem] border-4 border-ink bg-[linear-gradient(180deg,_#d7d9e4_0%,_#b8bccf_50%,_#8f95ac_100%)] p-4 shadow-brutal">
-          <div class="rounded-[1.6rem] border-4 border-ink bg-[linear-gradient(180deg,_#4f5670_0%,_#2f3447_100%)] p-4 text-white">
-            <div class="flex items-center justify-between">
-              <span class="rounded-full border-2 border-white/60 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.25em]">
-                Power
-              </span>
-              <p class="font-pixel text-[9px] uppercase leading-5">Game Boy Advance SP</p>
-            </div>
-            <div class="mt-4 rounded-[1.2rem] border-4 border-ink bg-[#c9ffd8] p-3 text-ink">
-              <p class="font-pixel text-[9px] uppercase leading-5">Control Deck</p>
-              <p class="mt-2 text-[11px] font-bold uppercase">D-pad + A/B + Start/Select</p>
-            </div>
+          <div class="battle-card player">
+            <p class="eyebrow">Tu Pokemon</p>
+            <h2 id="player-mon-name">Starter</h2>
+            <p id="player-mon-level">Nivel 5</p>
+            <div class="hp-wrap"><div id="player-hp-bar" class="hp-bar"></div></div>
+            <p id="player-hp-text">HP 10 / 10</p>
           </div>
-          <div class="mt-4 flex items-center gap-6">
-            <div class="grid w-[132px] grid-cols-3 gap-2">
-              <div></div>
-              <button class="gba-control rounded-xl border-4 border-ink bg-zinc-900 px-3 py-2 font-bold text-white" data-control="up">↑</button>
-              <div></div>
-              <button class="gba-control rounded-xl border-4 border-ink bg-zinc-900 px-3 py-2 font-bold text-white" data-control="left">←</button>
-              <button class="gba-control rounded-xl border-4 border-ink bg-zinc-900 px-3 py-2 font-bold text-white" data-control="down">↓</button>
-              <button class="gba-control rounded-xl border-4 border-ink bg-zinc-900 px-3 py-2 font-bold text-white" data-control="right">→</button>
-            </div>
-            <div class="grid flex-1 grid-cols-2 gap-3">
-              <button class="gba-control rounded-full border-4 border-ink bg-[#b83c7e] px-4 py-3 font-bold uppercase text-white" data-control="b">B</button>
-              <button class="gba-control rounded-full border-4 border-ink bg-[#7a49d8] px-4 py-3 font-bold uppercase text-white" data-control="a">A</button>
-              <button class="gba-control col-span-2 rounded-full border-4 border-ink bg-[#d6d8e2] px-4 py-2 font-bold uppercase" data-control="select">Select</button>
-              <button class="gba-control col-span-2 rounded-full border-4 border-ink bg-[#ece49b] px-4 py-2 font-bold uppercase" data-control="start">Start</button>
-            </div>
+
+          <div class="battle-log panel">
+            <p class="eyebrow">Log</p>
+            <div id="battle-log-list"></div>
           </div>
-          <div class="mt-3 flex items-center justify-between px-2 text-[11px] font-bold uppercase tracking-[0.2em] text-ink/80">
-            <span>L</span>
-            <span>SP hinge mode</span>
-            <span>R</span>
+
+          <div class="battle-actions panel">
+            <p class="eyebrow">Acciones</p>
+            <div class="button-grid">
+              <button class="battle-action" data-action="attack">Ataque</button>
+              <button class="battle-action" data-action="skill">Tecnica</button>
+              <button class="battle-action" data-action="ball">Pokeball</button>
+              <button class="battle-action" data-action="potion">Pocion</button>
+              <button class="battle-action" data-action="switch">Cambiar</button>
+              <button class="battle-action" data-action="run">Huir</button>
+            </div>
           </div>
         </div>
       </div>
-    </main>
 
-    <script>
-      const SUPABASE_URL =
-        'https://supabasekong-wckks4gsg8owkososoo8sosg.128.140.44.162.sslip.io';
-      const SUPABASE_ANON_KEY =
-        'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTc2ODkwNjQ0MCwiZXhwIjo0OTI0NTgwMDQwLCJyb2xlIjoiYW5vbiJ9.aePQztzDdhmgXjPlJ9zxh4_Qf5ex7Au7UyEiF_jzXK0';
-      const DEMO_PHONE = '+34600000123';
-      const DEMO_PASSWORD = 'PokemonMadridV2!2026';
-      const STORAGE_KEY = 'pokemon-madrid-v2-campaign-save';
-      const STARTERS = ['Charmander', 'Squirtle', 'Bulbasaur'];
-      const BATTLE_ACTIONS = ['attack', 'skill', 'guard', 'heal'];
-
-      const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-      const STAGES = [
-        {
-          id: 'eduardo',
-          act: 'Acto I',
-          kind: 'Gimnasio 1',
-          name: 'Eduardo, Lider del Ego Mesetario',
-          region: 'Meseta Central',
-          foe: 'Eduardo',
-          quote: 'Espero que hayas traido tu autoestima, porque yo la necesito para vivir.',
-          description:
-            'Primer choque en la region. Eduardo encarna la validacion externa y la arrogancia improductiva.',
-          reward: 'Medalla Ego + 90 ptas + 1 pocion',
-          team: ['Greedent de Castilla', 'Persian de saldo', 'Obstagoon caprichoso'],
-          difficulty: 1
-        },
-        {
-          id: 'cortina',
-          act: 'Acto I',
-          kind: 'Gimnasio 2',
-          name: 'Cortina, Lider de la Disolucion Gastrica',
-          region: 'Costa del Caos',
-          foe: 'Cortina',
-          quote: 'No se si es nervios, ansiedad o gastroenteritis, pero voy a darte asco.',
-          description:
-            'La ruta se vuelve mas toxica y acuosa. El combate mide resistencia y gestion del riesgo.',
-          reward: 'Medalla Nausea + 120 ptas',
-          team: ['Muk Cortiniano', 'Tentacruel', 'Dragalge'],
-          difficulty: 2
-        },
-        {
-          id: 'blanca',
-          act: 'Acto I',
-          kind: 'Gimnasio 3',
-          name: 'Blanca, Lider del Contrato Dulce',
-          region: 'Academia Notarial',
-          foe: 'Blanca',
-          quote: 'Te ganare con dulzura, educacion... y jurisprudencia.',
-          description:
-            'Blanca mezcla orden legal y ternura. Es un punto de control sobre decisiones y contratos.',
-          reward: 'Medalla Contrato + 140 ptas + buff de carisma',
-          team: ['Gardevoir Notarial', 'Sylveon', 'Togekiss'],
-          difficulty: 3
-        },
-        {
-          id: 'jesus',
-          act: 'Acto I',
-          kind: 'Gimnasio 4',
-          name: 'Jesus La Rata, Lider de lo Oscuro',
-          region: 'Subsuelo Vapeador',
-          foe: 'Jesus La Rata',
-          quote: 'Pensaste que me habias dejado atras, pero sigo vivo. Y mas feo.',
-          description:
-            'La historia gira hacia el deterioro, la recaida y la energia mas toxica del universo Team Piso.',
-          reward: 'Medalla Sombra + 160 ptas',
-          team: ['Weezing Vapeador', 'Gengar', 'Crobat', 'Drapion'],
-          difficulty: 4
-        },
-        {
-          id: 'rafael',
-          act: 'Acto I',
-          kind: 'Gimnasio 5',
-          name: 'Rafael Robledo, Lider de las Finanzas Oscuras',
-          region: 'Distrito Bursatil',
-          foe: 'Rafael Robledo',
-          quote: 'Te voy a vender un plan de pensiones mientras te debilito.',
-          description:
-            'El tono sube: hay corrupcion elegante, sonrisa peligrosa y golpes de acero oscuro.',
-          reward: 'Medalla Corrupta + 180 ptas',
-          team: ['Perrserker Corrupto', 'Honchkrow', 'Hydreigon'],
-          difficulty: 5
-        },
-        {
-          id: 'guillen',
-          act: 'Acto I',
-          kind: 'Gimnasio 6',
-          name: 'Sergio Guillen, Lider del Camionero Existencial',
-          region: 'Autovia del Vacio',
-          foe: 'Sergio Guillen',
-          quote: 'Tengo siete dias libres y voy a ver como te destruyo entre birras.',
-          description:
-            'El combate combina pegada bruta, desgaste y caos social. Marca el salto a la fase dura.',
-          reward: 'Medalla Ruta + 210 ptas + 1 pocion',
-          team: ['Slaking Cervecero', 'Machamp', 'Bewear', 'Pangoro'],
-          difficulty: 6
-        },
-        {
-          id: 'jose-antonio',
-          act: 'Acto I',
-          kind: 'Gimnasio 7',
-          name: 'Jose Antonio, Lider de la Renta Eterna',
-          region: 'Fortaleza del Alquiler',
-          foe: 'Jose Antonio',
-          quote: 'El alquiler se cobra el dia 1. Tu derrota, tambien.',
-          description:
-            'La presion economica se convierte en boss fight. Aguante, roca, acero y hostilidad pasiva.',
-          reward: 'Medalla Hipoteca + 230 ptas',
-          team: ['Probopass Calvo', 'Aggron', 'Steelix', 'Bastiodon'],
-          difficulty: 7
-        },
-        {
-          id: 'ivan',
-          act: 'Acto I',
-          kind: 'Gimnasio 8',
-          name: 'Ivan de Ramon, Lider de la Rentabilidad Final',
-          region: 'Arcane Lab',
-          foe: 'Ivan FinTips',
-          quote: 'Tu estrategia es buena. La mia... es inapelable.',
-          description:
-            'Cierre de gimnasios. Es el filtro tecnico antes de la Liga: precision, control y vision total.',
-          reward: 'Medalla Liquidez + acceso a la Liga',
-          team: ['Porygon-Z Fiscal', 'Lucario', 'Persian Chamberiano', 'Snorlax'],
-          difficulty: 8
-        },
-        {
-          id: 'alex',
-          act: 'Acto II',
-          kind: 'Alto Mando 1',
-          name: 'Alex, el Romantico Digital',
-          region: 'Centro Tech Erasmus',
-          foe: 'Alex',
-          quote: 'No he elegido esto, pero aqui estoy.',
-          description:
-            'Primer duelo de la Liga. Alex abre el Alto Mando con energia electrica y caos emocional.',
-          reward: 'Paso al Alto Mando 2 + 260 ptas',
-          team: ['Rotom Chamberiano', 'Ampharos', 'Togekiss', 'Porygon2'],
-          difficulty: 9
-        },
-        {
-          id: 'alvaro',
-          act: 'Acto II',
-          kind: 'Alto Mando 2',
-          name: 'Alvaro Alonso, el Planificador Total',
-          region: 'Torre Deloitte',
-          foe: 'Alvaro Alonso',
-          quote: 'Tu derrota esta prevista en la celda F46 del Excel.',
-          description:
-            'Fuego, psiquico y control de ritmo. Uno de los picos de dificultad del juego.',
-          reward: 'Paso al Alto Mando 3 + 290 ptas',
-          team: ['Alakazam Imperial', 'Delphox', 'Armarouge', 'Rapidash'],
-          difficulty: 10
-        },
-        {
-          id: 'jesus-return',
-          act: 'Acto II',
-          kind: 'Subcampeon',
-          name: 'Jesus La Rata, injerto final',
-          region: 'Camara Capilar',
-          foe: 'Jesus La Rata 2.0',
-          quote: 'Me hice un injerto. Pero sigo siendo una rata.',
-          description:
-            'El regreso mas toxico del documento. Version final de Jesus antes del choque politico.',
-          reward: 'Llave del Movimiento Barrera + 320 ptas',
-          team: ['Gengar Capilar', 'Spiritomb', 'Toxtricity', 'Houndoom'],
-          difficulty: 11
-        },
-        {
-          id: 'adrian',
-          act: 'Acto III',
-          kind: 'Villano Final',
-          name: 'Adrian Barrera, Fundador del Movimiento Schizo',
-          region: 'Foro de la Reforma Perfecta',
-          foe: 'Adrian Barrera',
-          quote: 'Mi perfeccion esta al alcance de todos... si hacen EXACTAMENTE lo que yo digo.',
-          description:
-            'Boss politico e intelectual. El juego decide aqui si Hispania Nova vuelve al caos libre o cae en el control total.',
-          reward: 'Derrota del Movimiento Barrera + 360 ptas',
-          team: ['Mr. Mime Tyrant', 'Hypno', 'Oricorio Baile', 'Gardevoir', 'Bronzong'],
-          difficulty: 12
-        },
-        {
-          id: 'marcelino',
-          act: 'Acto III',
-          kind: 'Campeon',
-          name: 'Marcelino, Campeon Supremo del Caos Eficiente',
-          region: 'Camara del Cashflow Final',
-          foe: 'Marcelino',
-          quote: 'Este combate te lo cierro hoy o nunca. Pero siempre gano.',
-          description:
-            'Final del juego. Marcelino representa la sintesis del caos productivo, el Excel y la fiesta.',
-          reward: 'Final canonico + trofeo Hispania Nova',
-          team: ['Metagross Emprendedor', 'Dragonite', 'Salamence', 'Lucario', 'Garchomp'],
-          difficulty: 13
-        }
-      ];
-
-      const SIDE_QUESTS = [
-        {
-          id: 'archivo-historico',
-          name: 'Archivo de Hispania',
-          requirement: 2,
-          effect: 'defense',
-          value: 2,
-          rewardText: '+2 defensa',
-          description:
-            'Recuperas cronicones, mapas y ruinas para entender por que la region se cayo a pedazos.'
-        },
-        {
-          id: 'mercado-negro',
-          name: 'Mercado Negro de Chamberi',
-          requirement: 4,
-          effect: 'coins',
-          value: 180,
-          rewardText: '+180 ptas',
-          description:
-            'Navegas el submundo financiero, evitas humo y rescatas liquidez para el tramo medio del juego.'
-        },
-        {
-          id: 'erasmus-neural',
-          name: 'Erasmus Neural',
-          requirement: 6,
-          effect: 'attack',
-          value: 3,
-          rewardText: '+3 ataque',
-          description:
-            'Hackeas el Centro Tech Erasmus y mejoras tu build con automatizacion y codigo.'
-        },
-        {
-          id: 'cena-team-piso',
-          name: 'Cena de Team Piso',
-          requirement: 8,
-          effect: 'potions',
-          value: 2,
-          rewardText: '+2 pociones',
-          description:
-            'Superas una cena absurda entre humo, geopolita y caos domestico. El premio es pura supervivencia.'
-        }
-      ];
-
-      const CODEX = [
-        'Region principal: Hispania Nova, con rutas historicas, ruinas, centros financieros y barrios de Madrid.',
-        'Villano central: Adrian Barrera y su Movimiento Schizo, obsesionado con imponer la Reforma Perfecta.',
-        'Liga final: Alex, Alvaro, Jesus renovado, Barrera y Marcelino.',
-        'Tema del juego: amistad, caos, historia de Espana, corrupcion, productividad y decadencia cotidiana.'
-      ];
-
-      const defaultState = () => ({
-        starter: null,
-        level: 1,
-        coins: 120,
-        potions: 3,
-        badges: [],
-        completedStages: [],
-        completedQuests: [],
-        selectedStageId: STAGES[0].id,
-        selectedStarterIndex: 0,
-        selectedQuestIndex: 0,
-        selectedBattleActionIndex: 0,
-        uiMode: 'map',
-        storyAct: 'Acto I',
-        bestWinStreak: 0,
-        wins: 0
-      });
-
-      const dom = {
-        authStatus: document.getElementById('auth-status'),
-        playerLevel: document.getElementById('player-level'),
-        playerCoins: document.getElementById('player-coins'),
-        playerBadges: document.getElementById('player-badges'),
-        playerPotions: document.getElementById('player-potions'),
-        playerName: document.getElementById('player-name'),
-        starterName: document.getElementById('starter-name'),
-        saveMode: document.getElementById('save-mode'),
-        storyState: document.getElementById('story-state'),
-        controlMode: document.getElementById('control-mode'),
-        controlSelection: document.getElementById('control-selection'),
-        statAttack: document.getElementById('stat-attack'),
-        statDefense: document.getElementById('stat-defense'),
-        statCharisma: document.getElementById('stat-charisma'),
-        stageTitle: document.getElementById('stage-title'),
-        stageRegion: document.getElementById('stage-region'),
-        stageKind: document.getElementById('stage-kind'),
-        stageDescription: document.getElementById('stage-description'),
-        stageFoe: document.getElementById('stage-foe'),
-        stageQuote: document.getElementById('stage-quote'),
-        stageReward: document.getElementById('stage-reward'),
-        stageTeam: document.getElementById('stage-team'),
-        startBattleButton: document.getElementById('start-battle-button'),
-        resetRunButton: document.getElementById('reset-run-button'),
-        battlePlayerName: document.getElementById('battle-player-name'),
-        battlePlayerHp: document.getElementById('battle-player-hp'),
-        battleEnemyName: document.getElementById('battle-enemy-name'),
-        battleEnemyHp: document.getElementById('battle-enemy-hp'),
-        playerHpBar: document.getElementById('player-hp-bar'),
-        enemyHpBar: document.getElementById('enemy-hp-bar'),
-        battleLog: document.getElementById('battle-log'),
-        stageList: document.getElementById('stage-list'),
-        questList: document.getElementById('quest-list'),
-        codexList: document.getElementById('codex-list'),
-        loginButton: document.getElementById('login-button'),
-        logoutButton: document.getElementById('logout-button')
-      };
-
-      let currentUser = null;
-      let gameState = defaultState();
-      let activeBattle = null;
-
-      function stageById(id) {
-        return STAGES.find((stage) => stage.id === id) || STAGES[0];
-      }
-
-      function unlockedStages() {
-        return STAGES.filter((stage, index) => isUnlocked(stage, index));
-      }
-
-      function nextStage() {
-        return STAGES.find((stage) => !gameState.completedStages.includes(stage.id)) || null;
-      }
-
-      function isUnlocked(stage, index) {
-        if (gameState.completedStages.includes(stage.id)) return true;
-        const next = nextStage();
-        return next ? next.id === stage.id : index === STAGES.length - 1;
-      }
-
-      function currentStoryAct() {
-        const count = gameState.completedStages.length;
-        if (count >= 11) return 'Acto III';
-        if (count >= 8) return 'Acto II';
-        return 'Acto I';
-      }
-
-      function normalizeState() {
-        const availableStages = unlockedStages();
-        const selectedStage = availableStages.find((stage) => stage.id === gameState.selectedStageId);
-        if (!selectedStage && availableStages[0]) {
-          gameState.selectedStageId = availableStages[0].id;
-        }
-        gameState.selectedStarterIndex = Math.max(0, Math.min(STARTERS.length - 1, gameState.selectedStarterIndex || 0));
-        gameState.selectedBattleActionIndex = Math.max(
-          0,
-          Math.min(BATTLE_ACTIONS.length - 1, gameState.selectedBattleActionIndex || 0)
-        );
-        gameState.selectedQuestIndex = Math.max(0, gameState.selectedQuestIndex || 0);
-        if (!['starter', 'map', 'quests', 'battle'].includes(gameState.uiMode)) {
-          gameState.uiMode = gameState.starter ? 'map' : 'starter';
-        }
-        if (activeBattle && gameState.uiMode !== 'battle') {
-          gameState.uiMode = 'battle';
-        }
-      }
-
-      function computedStats() {
-        const badgeCount = gameState.badges.length;
-        const questCount = gameState.completedQuests.length;
-        const base = {
-          attack: 10 + badgeCount * 2,
-          defense: 8 + badgeCount,
-          charisma: 7 + Math.floor(badgeCount / 2)
-        };
-
-        if (gameState.starter === 'Charmander') base.attack += 2;
-        if (gameState.starter === 'Squirtle') base.defense += 2;
-        if (gameState.starter === 'Bulbasaur') base.charisma += 2;
-
-        SIDE_QUESTS.forEach((quest) => {
-          if (!gameState.completedQuests.includes(quest.id)) return;
-          if (quest.effect === 'attack') base.attack += quest.value;
-          if (quest.effect === 'defense') base.defense += quest.value;
-        });
-
-        base.charisma += questCount;
-        return base;
-      }
-
-      function setBattleLog(message, prepend = true) {
-        const item = document.createElement('p');
-        item.textContent = message;
-        if (prepend) {
-          dom.battleLog.prepend(item);
-        } else {
-          dom.battleLog.append(item);
-        }
-      }
-
-      function hpWidth(current, max) {
-        return `${Math.max(0, Math.min(100, (current / max) * 100))}%`;
-      }
-
-      function saveLocal() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState));
-      }
-
-      async function saveRemote() {
-        if (!currentUser) return;
-        await client.auth.updateUser({
-          data: {
-            ...(currentUser.user_metadata || {}),
-            pmv2_campaign: gameState
-          }
-        });
-      }
-
-      async function persist() {
-        saveLocal();
-        await saveRemote();
-      }
-
-      function loadLocal() {
-        try {
-          const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-          if (parsed) gameState = { ...defaultState(), ...parsed };
-        } catch (_error) {
-          gameState = defaultState();
-        }
-      }
-
-      function renderCodex() {
-        dom.codexList.innerHTML = '';
-        CODEX.forEach((entry) => {
-          const card = document.createElement('div');
-          card.className = 'rounded-2xl border-4 border-ink bg-paper p-4';
-          card.textContent = entry;
-          dom.codexList.appendChild(card);
-        });
-      }
-
-      function renderPlayer() {
-        normalizeState();
-        const stats = computedStats();
-        dom.playerLevel.textContent = String(gameState.level);
-        dom.playerCoins.textContent = String(gameState.coins);
-        dom.playerBadges.textContent = String(gameState.badges.length);
-        dom.playerPotions.textContent = String(gameState.potions);
-        dom.playerName.textContent = currentUser
-          ? `Jugador demo +${currentUser.phone || ''}`
-          : 'Entrenador anonimo';
-        dom.starterName.textContent = `Starter: ${gameState.starter || 'pendiente'}`;
-        dom.saveMode.textContent = currentUser ? 'Guardado: Supabase + local' : 'Guardado: local';
-        dom.storyState.textContent = `Historia: ${currentStoryAct()}`;
-        dom.statAttack.textContent = String(stats.attack);
-        dom.statDefense.textContent = String(stats.defense);
-        dom.statCharisma.textContent = String(stats.charisma);
-      }
-
-      function renderSelectedStage() {
-        const stage = stageById(gameState.selectedStageId);
-        dom.stageTitle.textContent = stage.name;
-        dom.stageRegion.textContent = stage.region;
-        dom.stageKind.textContent = stage.kind;
-        dom.stageDescription.textContent = stage.description;
-        dom.stageFoe.textContent = stage.foe;
-        dom.stageQuote.textContent = stage.quote;
-        dom.stageReward.textContent = stage.reward;
-        dom.stageTeam.textContent = `Equipo: ${stage.team.join(', ')}`;
-      }
-
-      function renderStages() {
-        dom.stageList.innerHTML = '';
-        const availableStages = unlockedStages();
-        STAGES.forEach((stage, index) => {
-          const completed = gameState.completedStages.includes(stage.id);
-          const unlocked = isUnlocked(stage, index);
-          const highlighted =
-            gameState.uiMode === 'map' && stage.id === gameState.selectedStageId;
-          const card = document.createElement('button');
-          card.className =
-            'rounded-[1.5rem] border-4 border-ink p-4 text-left shadow-brutal transition ' +
-            (completed
-              ? 'bg-moss'
-              : unlocked
-                ? 'bg-white hover:-translate-y-1'
-                : 'bg-zinc-200 opacity-70') +
-            (highlighted ? ' ring-4 ring-void' : '');
-          card.disabled = !unlocked;
-          card.innerHTML = `
-            <p class="text-xs font-bold uppercase">${stage.kind}</p>
-            <h3 class="mt-2 text-lg font-black">${stage.foe}</h3>
-            <p class="mt-2 text-sm leading-7">${stage.region}</p>
-            <p class="mt-3 text-xs font-bold uppercase">${completed ? 'Completado' : unlocked ? 'Disponible' : 'Bloqueado'}</p>
-          `;
-          card.addEventListener('click', () => {
-            gameState.selectedStageId = stage.id;
-            gameState.uiMode = 'map';
-            renderSelectedStage();
-            renderStages();
-            persist();
-          });
-          dom.stageList.appendChild(card);
-        });
-        if (!availableStages.find((stage) => stage.id === gameState.selectedStageId) && availableStages[0]) {
-          gameState.selectedStageId = availableStages[0].id;
-        }
-      }
-
-      function applyQuestReward(quest) {
-        if (quest.effect === 'coins') gameState.coins += quest.value;
-        if (quest.effect === 'potions') gameState.potions += quest.value;
-      }
-
-      function renderQuests() {
-        dom.questList.innerHTML = '';
-        SIDE_QUESTS.forEach((quest) => {
-          const completed = gameState.completedQuests.includes(quest.id);
-          const unlocked = gameState.badges.length >= quest.requirement;
-          const highlighted =
-            gameState.uiMode === 'quests' &&
-            SIDE_QUESTS[gameState.selectedQuestIndex] &&
-            SIDE_QUESTS[gameState.selectedQuestIndex].id === quest.id;
-          const card = document.createElement('div');
-          card.className =
-            'rounded-[1.5rem] border-4 border-ink bg-paper p-4' +
-            (highlighted ? ' ring-4 ring-void' : '');
-          const button = document.createElement('button');
-          button.className =
-            'mt-4 rounded-full border-4 border-ink px-4 py-2 font-bold uppercase shadow-brutal ' +
-            (completed
-              ? 'bg-zinc-200'
-              : unlocked
-                ? 'bg-wave hover:-translate-y-1'
-                : 'bg-white opacity-60');
-          button.textContent = completed ? 'Completada' : unlocked ? `Cobrar ${quest.rewardText}` : `Necesitas ${quest.requirement} medallas`;
-          button.disabled = completed || !unlocked;
-          button.addEventListener('click', async () => {
-            gameState.completedQuests.push(quest.id);
-            applyQuestReward(quest);
-            setBattleLog(`Side quest completada: ${quest.name}. Recompensa: ${quest.rewardText}.`);
-            renderAll();
-            await persist();
-          });
-
-          card.innerHTML = `
-            <p class="text-xs font-bold uppercase">${quest.name}</p>
-            <p class="mt-2 text-sm leading-7">${quest.description}</p>
-            <p class="mt-3 text-sm font-bold">Recompensa: ${quest.rewardText}</p>
-          `;
-          card.appendChild(button);
-          dom.questList.appendChild(card);
-        });
-      }
-
-      function renderBattle() {
-        const starter = gameState.starter || 'Sin starter';
-        dom.battlePlayerName.textContent = `${starter} / Nivel ${gameState.level}`;
-        document.querySelectorAll('.battle-action').forEach((button, index) => {
-          const highlighted =
-            gameState.uiMode === 'battle' && gameState.selectedBattleActionIndex === index;
-          button.classList.toggle('ring-4', highlighted);
-          button.classList.toggle('ring-void', highlighted);
-        });
-
-        if (!activeBattle) {
-          dom.battlePlayerHp.textContent = 'HP 0 / 0';
-          dom.battleEnemyName.textContent = 'Sin rival';
-          dom.battleEnemyHp.textContent = 'HP 0 / 0';
-          dom.playerHpBar.style.width = '0%';
-          dom.enemyHpBar.style.width = '0%';
-          return;
-        }
-
-        dom.battlePlayerHp.textContent = `HP ${activeBattle.playerHp} / ${activeBattle.playerMaxHp}`;
-        dom.battleEnemyName.textContent = activeBattle.enemy.name;
-        dom.battleEnemyHp.textContent = `HP ${activeBattle.enemyHp} / ${activeBattle.enemyMaxHp}`;
-        dom.playerHpBar.style.width = hpWidth(activeBattle.playerHp, activeBattle.playerMaxHp);
-        dom.enemyHpBar.style.width = hpWidth(activeBattle.enemyHp, activeBattle.enemyMaxHp);
-      }
-
-      function renderAll() {
-        gameState.storyAct = currentStoryAct();
-        renderPlayer();
-        renderSelectedStage();
-        renderStages();
-        renderQuests();
-        renderBattle();
-        renderControlHud();
-        renderStarterButtons();
-      }
-
-      function renderStarterButtons() {
-        document.querySelectorAll('.starter-button').forEach((button, index) => {
-          const selected = STARTERS[gameState.selectedStarterIndex] === button.dataset.starter;
-          const highlighted = gameState.uiMode === 'starter' && selected;
-          button.classList.toggle('ring-4', highlighted);
-          button.classList.toggle('ring-void', highlighted);
-          button.classList.toggle('scale-105', highlighted);
-          if (!highlighted) button.classList.remove('scale-105');
-        });
-      }
-
-      function renderControlHud() {
-        const selectedQuest = SIDE_QUESTS[gameState.selectedQuestIndex];
-        let selection = 'ninguna';
-        if (gameState.uiMode === 'starter') selection = STARTERS[gameState.selectedStarterIndex];
-        if (gameState.uiMode === 'map') selection = stageById(gameState.selectedStageId).foe;
-        if (gameState.uiMode === 'quests') selection = selectedQuest ? selectedQuest.name : 'sin quest';
-        if (gameState.uiMode === 'battle') selection = BATTLE_ACTIONS[gameState.selectedBattleActionIndex];
-        dom.controlMode.textContent = `Modo: ${gameState.uiMode}`;
-        dom.controlSelection.textContent = `Seleccion: ${selection}`;
-      }
-
-      function startBattle() {
-        const stage = stageById(gameState.selectedStageId);
-        if (!isUnlocked(stage, STAGES.indexOf(stage))) {
-          setBattleLog('Esa etapa aun no esta desbloqueada.');
-          return;
-        }
-        if (!gameState.starter) {
-          setBattleLog('Elige un starter antes de iniciar la campaña.');
-          return;
-        }
-
-        const stats = computedStats();
-        activeBattle = {
-          stageId: stage.id,
-          enemy: stage,
-          playerGuard: false,
-          enemyGuard: false,
-          playerMaxHp: 72 + gameState.level * 6 + stats.defense * 2,
-          playerHp: 72 + gameState.level * 6 + stats.defense * 2,
-          enemyMaxHp: 48 + stage.difficulty * 18,
-          enemyHp: 48 + stage.difficulty * 18
-        };
-        gameState.uiMode = 'battle';
-        gameState.selectedBattleActionIndex = 0;
-        setBattleLog(`Empieza el combate contra ${stage.foe}. "${stage.quote}"`);
-        renderBattle();
-      }
-
-      function enemyAttackPower(stage) {
-        return 8 + stage.difficulty * 2;
-      }
-
-      function playerAttackPower() {
-        const stats = computedStats();
-        return stats.attack + gameState.level;
-      }
-
-      async function finishVictory() {
-        const stage = activeBattle.enemy;
-        activeBattle = null;
-        if (!gameState.completedStages.includes(stage.id)) {
-          gameState.completedStages.push(stage.id);
-          if (stage.kind.startsWith('Gimnasio')) gameState.badges.push(stage.kind);
-        }
-        gameState.level += 1;
-        gameState.coins += 80 + stage.difficulty * 20;
-        gameState.wins += 1;
-        gameState.bestWinStreak = Math.max(gameState.bestWinStreak, gameState.wins);
-        if (stage.reward.includes('pocion')) gameState.potions += 1;
-        const next = nextStage();
-        if (next) gameState.selectedStageId = next.id;
-        setBattleLog(`Victoria sobre ${stage.foe}. ${stage.reward}.`);
-        if (!next) {
-          setBattleLog('Has completado la historia completa de Hispania Nova.');
-        }
-        gameState.uiMode = 'map';
-        renderAll();
-        await persist();
-      }
-
-      async function finishDefeat() {
-        activeBattle = null;
-        gameState.wins = 0;
-        gameState.coins = Math.max(0, gameState.coins - 40);
-        gameState.uiMode = 'map';
-        setBattleLog('Has perdido el combate. Vuelves al centro con menos dinero y el orgullo tocado.');
-        renderAll();
-        await persist();
-      }
-
-      async function doBattleAction(action) {
-        if (!activeBattle) {
-          setBattleLog('No hay combate activo.');
-          return;
-        }
-
-        const stage = activeBattle.enemy;
-        const stats = computedStats();
-        let damage = 0;
-
-        if (action === 'attack') {
-          damage = playerAttackPower() + Math.floor(Math.random() * 5);
-          activeBattle.enemyHp -= damage;
-          setBattleLog(`Atacas y haces ${damage} de dano a ${stage.foe}.`);
-        }
-
-        if (action === 'skill') {
-          damage = playerAttackPower() + stats.charisma + Math.floor(Math.random() * 7);
-          activeBattle.enemyHp -= damage;
-          setBattleLog(`Tecnica especial. La presion narrativa golpea por ${damage}.`);
-        }
-
-        if (action === 'guard') {
-          activeBattle.playerGuard = true;
-          setBattleLog('Preparas defensa para reducir el siguiente golpe.');
-        }
-
-        if (action === 'heal') {
-          if (gameState.potions <= 0) {
-            setBattleLog('No te quedan pociones.');
-            return;
-          }
-          gameState.potions -= 1;
-          activeBattle.playerHp = Math.min(activeBattle.playerMaxHp, activeBattle.playerHp + 28);
-          setBattleLog('Usas una pocion y recuperas 28 HP.');
-        }
-
-        activeBattle.enemyHp = Math.max(0, activeBattle.enemyHp);
-        renderAll();
-
-        if (activeBattle.enemyHp <= 0) {
-          await finishVictory();
-          return;
-        }
-
-        let enemyDamage = enemyAttackPower(stage) + Math.floor(Math.random() * 6);
-        if (activeBattle.playerGuard) {
-          enemyDamage = Math.max(3, enemyDamage - (6 + Math.floor(stats.defense / 2)));
-          activeBattle.playerGuard = false;
-        }
-        activeBattle.playerHp -= enemyDamage;
-        activeBattle.playerHp = Math.max(0, activeBattle.playerHp);
-        setBattleLog(`${stage.foe} responde y hace ${enemyDamage} de dano.`);
-
-        renderBattle();
-
-        if (activeBattle.playerHp <= 0) {
-          await finishDefeat();
-          return;
-        }
-
-        await persist();
-      }
-
-      async function resetRun() {
-        gameState = defaultState();
-        activeBattle = null;
-        setBattleLog('Partida reiniciada. El imperio vuelve a caer desde el principio.');
-        renderAll();
-        await persist();
-      }
-
-      async function chooseStarter(name) {
-        gameState.starter = name;
-        gameState.uiMode = 'map';
-        setBattleLog(`Has elegido a ${name} como starter.`);
-        renderAll();
-        await persist();
-      }
-
-      async function restoreSession() {
-        loadLocal();
-        const { data } = await client.auth.getSession();
-        currentUser = data.session?.user || null;
-        if (currentUser?.user_metadata?.pmv2_campaign) {
-          gameState = {
-            ...defaultState(),
-            ...currentUser.user_metadata.pmv2_campaign
-          };
-        }
-        dom.authStatus.textContent = currentUser ? 'Sesion iniciada' : 'Modo invitado';
-        renderAll();
-      }
-
-      async function loginDemo() {
-        setBattleLog('Conectando con Supabase...');
-        const { data, error } = await client.auth.signInWithPassword({
-          phone: DEMO_PHONE,
-          password: DEMO_PASSWORD
-        });
-        if (error) {
-          setBattleLog(`Login fallido: ${error.message}`);
-          return;
-        }
-        currentUser = data.user;
-        dom.authStatus.textContent = 'Sesion iniciada';
-        if (currentUser.user_metadata?.pmv2_campaign) {
-          gameState = {
-            ...defaultState(),
-            ...currentUser.user_metadata.pmv2_campaign
-          };
-        } else {
-          await saveRemote();
-        }
-        renderAll();
-        setBattleLog('Sesion iniciada. El progreso ahora se guarda tambien en Supabase.');
-      }
-
-      async function logout() {
-        await client.auth.signOut();
-        currentUser = null;
-        dom.authStatus.textContent = 'Modo invitado';
-        renderAll();
-        setBattleLog('Sesion cerrada. Sigues jugando con guardado local.');
-      }
-
-      document.querySelectorAll('.starter-button').forEach((button) => {
-        button.addEventListener('click', () => chooseStarter(button.dataset.starter));
-      });
-
-      document.querySelectorAll('.battle-action').forEach((button) => {
-        button.addEventListener('click', () => doBattleAction(button.dataset.action));
-      });
-
-      dom.startBattleButton.addEventListener('click', startBattle);
-      dom.resetRunButton.addEventListener('click', resetRun);
-      dom.loginButton.addEventListener('click', loginDemo);
-      dom.logoutButton.addEventListener('click', logout);
-
-      async function triggerCurrentQuest() {
-        const quest = SIDE_QUESTS[gameState.selectedQuestIndex];
-        if (!quest) return;
-        if (gameState.completedQuests.includes(quest.id)) {
-          setBattleLog('Esa side quest ya esta completada.');
-          return;
-        }
-        if (gameState.badges.length < quest.requirement) {
-          setBattleLog(`Necesitas ${quest.requirement} medallas para esa side quest.`);
-          return;
-        }
-        gameState.completedQuests.push(quest.id);
-        applyQuestReward(quest);
-        setBattleLog(`Side quest completada: ${quest.name}. Recompensa: ${quest.rewardText}.`);
-        renderAll();
-        await persist();
-      }
-
-      function cycleMode() {
-        const modes = activeBattle ? ['battle', 'map', 'quests', 'starter'] : ['map', 'quests', 'starter'];
-        const currentIndex = modes.indexOf(gameState.uiMode);
-        gameState.uiMode = modes[(currentIndex + 1) % modes.length];
-        renderAll();
-      }
-
-      function moveSelection(direction) {
-        if (gameState.uiMode === 'starter') {
-          const step = direction === 'left' || direction === 'up' ? -1 : 1;
-          gameState.selectedStarterIndex =
-            (gameState.selectedStarterIndex + step + STARTERS.length) % STARTERS.length;
-        }
-
-        if (gameState.uiMode === 'map') {
-          const availableStages = unlockedStages();
-          let index = availableStages.findIndex((stage) => stage.id === gameState.selectedStageId);
-          if (index < 0) index = 0;
-          const step = direction === 'left' || direction === 'up' ? -1 : 1;
-          index = (index + step + availableStages.length) % availableStages.length;
-          gameState.selectedStageId = availableStages[index].id;
-        }
-
-        if (gameState.uiMode === 'quests') {
-          const step = direction === 'left' || direction === 'up' ? -1 : 1;
-          gameState.selectedQuestIndex =
-            (gameState.selectedQuestIndex + step + SIDE_QUESTS.length) % SIDE_QUESTS.length;
-        }
-
-        if (gameState.uiMode === 'battle') {
-          const step = direction === 'left' || direction === 'up' ? -1 : 1;
-          gameState.selectedBattleActionIndex =
-            (gameState.selectedBattleActionIndex + step + BATTLE_ACTIONS.length) %
-            BATTLE_ACTIONS.length;
-        }
-
-        renderAll();
-      }
-
-      async function handleA() {
-        if (gameState.uiMode === 'starter') {
-          await chooseStarter(STARTERS[gameState.selectedStarterIndex]);
-          return;
-        }
-        if (gameState.uiMode === 'map') {
-          startBattle();
-          return;
-        }
-        if (gameState.uiMode === 'quests') {
-          await triggerCurrentQuest();
-          return;
-        }
-        if (gameState.uiMode === 'battle') {
-          await doBattleAction(BATTLE_ACTIONS[gameState.selectedBattleActionIndex]);
-        }
-      }
-
-      function handleB() {
-        if (activeBattle) {
-          setBattleLog('No puedes huir de un combate de Liga o de historia.');
-          return;
-        }
-        gameState.uiMode = 'map';
-        renderAll();
-      }
-
-      function handleStart() {
-        if (activeBattle) {
-          gameState.uiMode = 'battle';
-          renderAll();
-          return;
-        }
-        startBattle();
-      }
-
-      function handleControl(control) {
-        if (['up', 'down', 'left', 'right'].includes(control)) {
-          moveSelection(control);
-          return;
-        }
-        if (control === 'a') {
-          handleA();
-          return;
-        }
-        if (control === 'b') {
-          handleB();
-          return;
-        }
-        if (control === 'start') {
-          handleStart();
-          return;
-        }
-        if (control === 'select') {
-          cycleMode();
-        }
-      }
-
-      document.querySelectorAll('.gba-control').forEach((button) => {
-        button.addEventListener('click', () => handleControl(button.dataset.control));
-      });
-
-      window.addEventListener('keydown', (event) => {
-        const key = event.key.toLowerCase();
-        if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'x', 'z', 'enter', 'shift'].includes(key)) {
-          event.preventDefault();
-        }
-        if (key === 'arrowup') handleControl('up');
-        if (key === 'arrowdown') handleControl('down');
-        if (key === 'arrowleft') handleControl('left');
-        if (key === 'arrowright') handleControl('right');
-        if (key === 'x') handleControl('a');
-        if (key === 'z') handleControl('b');
-        if (key === 'enter') handleControl('start');
-        if (key === 'shift') handleControl('select');
-      });
-
-      client.auth.onAuthStateChange((_event, session) => {
-        currentUser = session?.user || null;
-        dom.authStatus.textContent = currentUser ? 'Sesion iniciada' : 'Modo invitado';
-      });
-
-      renderCodex();
-      restoreSession();
-    </script>
+      <div id="mobile-controls">
+        <div class="dpad">
+          <button data-control="up">↑</button>
+          <button data-control="left">←</button>
+          <button data-control="down">↓</button>
+          <button data-control="right">→</button>
+        </div>
+        <div class="ab-buttons">
+          <button data-control="b" class="b-btn">B</button>
+          <button data-control="a" class="a-btn">A</button>
+          <button data-control="select">Select</button>
+          <button data-control="start">Start</button>
+        </div>
+      </div>
+
+      <div id="brand">Desarrollado por Stratoma AI</div>
+    </div>
+
+    <script type="module" src="./src/main.js"></script>
   </body>
 </html>
