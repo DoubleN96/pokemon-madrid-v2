@@ -36,6 +36,13 @@ const battleLogListEl = document.getElementById('battle-log-list');
 const menuScreenEl = document.getElementById('menu-screen');
 const menuContentEl = document.getElementById('menu-content');
 
+const AREA_PREVIEWS = {
+  tetuan: './assets/project-palladium/maps/new-bark-town.png',
+  plaza: './assets/project-palladium/maps/cherrygrove-city.png',
+  castellana: './assets/project-palladium/maps/route-29.png',
+  liga: './assets/project-palladium/maps/violet-city-gym.png'
+};
+
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xb8d878);
 scene.fog = new THREE.Fog(0xb8d878, 10, 24);
@@ -284,6 +291,7 @@ function renderMenu() {
   }
   menuScreenEl.classList.remove('hidden');
   const next = nextStage();
+  const preview = AREA_PREVIEWS[state.currentArea];
   menuContentEl.innerHTML = `
     <p><strong>Zona actual:</strong> ${currentArea().name}</p>
     <p><strong>Siguiente objetivo:</strong> ${next ? `${next.name} - ${next.title}` : 'Liga despejada'}</p>
@@ -292,6 +300,10 @@ function renderMenu() {
     <p><strong>Equipo:</strong> ${state.player.party.map((mon) => `${mon.species} Nv${mon.level}`).join(', ') || 'Vacio'}</p>
     <p><strong>Flags:</strong> madre ${state.flags.talkedToMother ? 'ok' : 'pendiente'} · Galdos ${state.flags.metGaldos ? 'ok' : 'pendiente'} · Pablo ${state.flags.beatPablo ? 'ok' : 'pendiente'} · Orson ${state.flags.sawLegendary ? 'visto' : 'pendiente'}</p>
     <p><strong>Controles:</strong> Flechas/WASD mover · X interactuar · Z atras/huir · Shift cambiar lead · Enter menu.</p>
+    <div class="area-preview">
+      <img src="${preview}" alt="Preview ${currentArea().name}" />
+    </div>
+    <p class="asset-credit"><strong>Assets visibles:</strong> Project Palladium resource pack via Team Aqua's Asset Repo. Credito al equipo Project Palladium y autores indicados en sus README.</p>
   `;
 }
 

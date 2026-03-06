@@ -13,6 +13,8 @@ Repositorio del RPG web 3D inspirado en el documento fuente de Team Piso y en la
 - `style.css`: HUD, overlays y visual GBA-web.
 - `src/main.js`: mundo 3D, movimiento, encuentros, combates, capturas y guardado.
 - `src/game-data.js`: especies, stages y layout del mapa.
+- `assets/project-palladium/`: seleccion de UI, mapas y sprites importados para reforzar la capa visual.
+- `CREDITS.md`: trazabilidad de assets externos integrados.
 - `Dockerfile`: imagen minima con `nginx:alpine`.
 - `default.conf`: configuracion simple para servir la app.
 
